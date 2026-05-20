@@ -37,7 +37,7 @@ export const DEFAULT_AGENT_RUNTIME_CONFIG: AgentRuntimeConfig = {
   agentPlatform: 'streamlit',
   intentRecognitionTechnology: 'classical',
   agentLlmProvider: 'openai',
-  agentLlmModel: 'gpt-4o-mini',
+  agentLlmModel: 'gpt-5.5',
   agentCustomLlmModel: '',
   agentLlmName: '',
 };
