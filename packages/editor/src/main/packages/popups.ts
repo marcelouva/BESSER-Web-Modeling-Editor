@@ -144,6 +144,9 @@ export const Popups: { [key in UMLElementType | UMLRelationshipType]: ComponentT
   [UMLElementType.AgentSkill]: AgentSkillUpdate,
   [UMLElementType.AgentWorkspace]: AgentWorkspaceUpdate,
   [UMLElementType.AgentReasoningState]: AgentReasoningStateUpdate,
+  [UMLElementType.AgentLLM]: null,
+  [UMLElementType.AgentSectionTitle]: null,
+  [UMLElementType.AgentSectionSeparator]: null,
   // [UMLElementType.AgentStateBody]: null,
   // Relationships
   [UMLRelationshipType.ClassAggregation]: UMLClassAssociationUpdate,

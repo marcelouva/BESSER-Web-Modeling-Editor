@@ -83,6 +83,7 @@ import { AgentSkill } from './agent-state-diagram/agent-skill/agent-skill';
 import { AgentWorkspace } from './agent-state-diagram/agent-workspace/agent-workspace';
 import { AgentLLM } from './agent-state-diagram/agent-llm/agent-llm';
 import { AgentReasoningState } from './agent-state-diagram/agent-reasoning-state/agent-reasoning-state';
+import { AgentSectionTitle, AgentSectionSeparator } from './agent-state-diagram/agent-section-elements';
 
 import { NNElementType } from './nn-diagram';
 import { Conv1DLayer } from './nn-diagram/nn-conv1d-layer/nn-conv1d-layer';
@@ -368,6 +369,8 @@ export const UMLElements = {
   [UMLElementType.AgentWorkspace]: AgentWorkspace,
   [UMLElementType.AgentLLM]: AgentLLM,
   [UMLElementType.AgentReasoningState]: AgentReasoningState,
+  [UMLElementType.AgentSectionTitle]: AgentSectionTitle,
+  [UMLElementType.AgentSectionSeparator]: AgentSectionSeparator,
 
   [NNElementType.Conv1DLayer]: Conv1DLayer,
   // Conv1D Attributes - Mandatory

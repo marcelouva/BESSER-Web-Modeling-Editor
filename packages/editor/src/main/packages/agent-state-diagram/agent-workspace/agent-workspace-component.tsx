@@ -34,7 +34,7 @@ export const AgentWorkspaceComponent: FunctionComponent<Props> = ({ element, chi
         strokeColor={accent}
       />
       <Text y={22} fill={accent} fontWeight="bold" fontSize="80%">
-        «workspace»
+        {`${AGENT_PRIMITIVE_COLORS.workspace.icon} «workspace»`}
       </Text>
       <Text y={42} fill={textColor} fontWeight="bold">
         {element.name}

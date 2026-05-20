@@ -230,6 +230,8 @@ export const Components: {
   [UMLElementType.AgentWorkspace]: AgentWorkspaceComponent,
   [UMLElementType.AgentReasoningState]: AgentReasoningStateComponent,
   [UMLElementType.AgentLLM]: AgentLLMNoopComponent,
+  [UMLElementType.AgentSectionTitle]: NNSectionTitleComponent as any,
+  [UMLElementType.AgentSectionSeparator]: NNSectionSeparatorComponent as any,
   [UMLRelationshipType.AgentStateTransition]: AgentStateTransitionComponent,
   [UMLRelationshipType.AgentStateTransitionInit]: AgentStateTransitionInitComponent,
 

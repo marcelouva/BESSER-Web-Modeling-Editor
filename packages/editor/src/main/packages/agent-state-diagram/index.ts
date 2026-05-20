@@ -24,6 +24,8 @@ export const AgentElementType = {
   AgentWorkspace: 'AgentWorkspace',
   AgentReasoningState: 'AgentReasoningState',
   AgentLLM: 'AgentLLM',
+  AgentSectionTitle: 'AgentSectionTitle',
+  AgentSectionSeparator: 'AgentSectionSeparator',
 } as const;
 
 export const AgentRelationshipType = {

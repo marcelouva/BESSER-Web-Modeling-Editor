@@ -34,7 +34,7 @@ export const AgentSkillComponent: FunctionComponent<Props> = ({ element, childre
         strokeColor={accent}
       />
       <Text y={22} fill={accent} fontWeight="bold" fontSize="80%">
-        «skill»
+        {`${AGENT_PRIMITIVE_COLORS.skill.icon} «skill»`}
       </Text>
       <Text y={42} fill={textColor} fontWeight="bold">
         {element.name}

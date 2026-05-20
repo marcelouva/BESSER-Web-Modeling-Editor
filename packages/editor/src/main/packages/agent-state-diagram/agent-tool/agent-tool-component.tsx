@@ -34,7 +34,7 @@ export const AgentToolComponent: FunctionComponent<Props> = ({ element, children
         strokeColor={accent}
       />
       <Text y={22} fill={accent} fontWeight="bold" fontSize="80%">
-        «tool»
+        {`${AGENT_PRIMITIVE_COLORS.tool.icon} «tool»`}
       </Text>
       <Text y={42} fill={textColor} fontWeight="bold">
         {element.name}
