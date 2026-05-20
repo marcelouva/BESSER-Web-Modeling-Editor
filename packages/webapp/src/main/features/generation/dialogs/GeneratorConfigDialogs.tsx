@@ -220,6 +220,10 @@ export const GeneratorConfigDialogs: React.FC<GeneratorConfigDialogsProps> = ({
       agentLlmProvider: llmBlock?.provider,
       agentLlmModel: typeof llmBlock?.model === 'string' ? llmBlock.model : undefined,
       agentCustomLlmModel: undefined,
+      agentLlmName:
+        typeof diagramConfig.agentLlmName === 'string'
+          ? diagramConfig.agentLlmName
+          : (typeof llmBlock?.name === 'string' ? llmBlock.name : undefined),
     });
   }, [configDialog, currentProject]);
   const agentPlatformLabel = useMemo(() => {
@@ -234,23 +238,6 @@ export const GeneratorConfigDialogs: React.FC<GeneratorConfigDialogsProps> = ({
         return agentSystemConfig?.agentPlatform ?? '—';
     }
   }, [agentSystemConfig]);
-  const agentLlmLabel = useMemo(() => {
-    if (!agentSystemConfig?.agentLlmProvider) return 'None';
-    const providerLabels: Record<string, string> = {
-      openai: 'OpenAI',
-      huggingface: 'HuggingFace',
-      huggingfaceapi: 'HuggingFace API',
-      replicate: 'Replicate',
-    };
-    const providerLabel = providerLabels[agentSystemConfig.agentLlmProvider] ?? agentSystemConfig.agentLlmProvider;
-    if (agentSystemConfig.agentLlmProvider !== 'openai') return providerLabel;
-    const model =
-      agentSystemConfig.agentLlmModel === 'other'
-        ? agentSystemConfig.agentCustomLlmModel.trim()
-        : agentSystemConfig.agentLlmModel;
-    return model ? `${providerLabel} · ${model}` : providerLabel;
-  }, [agentSystemConfig]);
-
   return (
     <>
       <Dialog
@@ -537,10 +524,6 @@ export const GeneratorConfigDialogs: React.FC<GeneratorConfigDialogsProps> = ({
                 <div className="flex justify-between gap-2 md:block">
                   <dt className="text-xs uppercase tracking-wide text-muted-foreground">Intent Recognition</dt>
                   <dd>{agentSystemConfig?.intentRecognitionTechnology === 'classical' ? 'Classical' : 'LLM-based'}</dd>
-                </div>
-                <div className="flex justify-between gap-2 md:col-span-2 md:block">
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">LLM</dt>
-                  <dd>{agentLlmLabel}</dd>
                 </div>
               </dl>
               <p className="mt-3 text-xs text-muted-foreground">

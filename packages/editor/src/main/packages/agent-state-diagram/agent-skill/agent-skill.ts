@@ -2,62 +2,66 @@ import { DeepPartial } from 'redux';
 import { AgentElementType } from '..';
 import { ILayer } from '../../../services/layouter/layer';
 import { ILayoutable } from '../../../services/layouter/layoutable';
+import * as Apollon from '../../../typings';
 import { IUMLElement, UMLElement } from '../../../services/uml-element/uml-element';
 import { UMLElementFeatures } from '../../../services/uml-element/uml-element-features';
-import * as Apollon from '../../../typings';
 import { assign } from '../../../utils/fx/assign';
 import { IBoundary } from '../../../utils/geometry/boundary';
 import { Text } from '../../../utils/svg/text';
 import { UMLElementType } from '../../uml-element-type';
 
-export interface IAgentRagElement extends IUMLElement {
-  llm_name: string;
+export interface IAgentSkill extends IUMLElement {
+  content: string;
+  description: string;
 }
 
-export class AgentRagElement extends UMLElement implements IAgentRagElement {
+export class AgentSkill extends UMLElement implements IAgentSkill {
   static features: UMLElementFeatures = {
     ...UMLElement.features,
     resizable: true,
     droppable: false,
   };
 
-  type: UMLElementType = AgentElementType.AgentRagElement;
-  llm_name: string = '';
+  type: UMLElementType = AgentElementType.AgentSkill;
+  content: string = '';
+  description: string = '';
 
   bounds: IBoundary = {
     ...this.bounds,
-    width: 140,
-    height: 120,
+    width: 160,
+    height: 80,
   };
 
-  constructor(values?: DeepPartial<IAgentRagElement>) {
+  constructor(values?: DeepPartial<IAgentSkill>) {
     super(values);
-    assign<IAgentRagElement>(this, values);
+    assign<IAgentSkill>(this, values);
     if (!this.name) {
       this.name = '';
     }
   }
 
-  serialize(children: UMLElement[] = []): Apollon.UMLModelElement {
+  serialize(children?: UMLElement[]): Apollon.UMLModelElement {
     return {
       ...super.serialize(children),
       type: this.type as UMLElementType,
-      llm_name: this.llm_name,
-    } as Apollon.UMLModelElement & { llm_name: string };
+      content: this.content,
+      description: this.description,
+    } as Apollon.UMLModelElement & { content: string; description: string };
   }
 
   deserialize<T extends Apollon.UMLModelElement>(
-    values: T & { llm_name?: string },
+    values: T & { content?: string; description?: string },
     children?: Apollon.UMLModelElement[],
   ): void {
     super.deserialize(values, children);
-    this.llm_name = values.llm_name || '';
+    this.content = values.content || '';
+    this.description = values.description || '';
   }
 
   render(layer: ILayer): ILayoutable[] {
-    const minWidth = Math.max(120, Text.size(layer, this.name, { fontWeight: 'normal' }).width + 40);
+    const minWidth = Math.max(140, Text.size(layer, this.name, { fontWeight: 'bold' }).width + 40);
     this.bounds.width = Math.max(this.bounds.width, minWidth);
-    this.bounds.height = Math.max(this.bounds.height, 110);
+    this.bounds.height = Math.max(this.bounds.height, 80);
     return [this];
   }
 }
