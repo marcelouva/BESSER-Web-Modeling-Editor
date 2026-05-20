@@ -435,27 +435,34 @@ const formatAgentLLMParameters = (parameters: Record<string, unknown>): string =
   }
 };
 
-const toVariantList = (raw: unknown): AgentModelVariantSnapshot[] => {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
+// Element types that carry an `llm_name` reference to a registered AgentLLM.
+const LLM_REFERENCING_TYPES = new Set<string>([
+  'AgentRagElement',
+  'AgentReasoningState',
+  'AgentStateBody',
+  'AgentStateFallbackBody',
+]);
 
-  return raw.filter((entry): entry is AgentModelVariantSnapshot => {
-    if (!entry || typeof entry !== 'object') {
-      return false;
+// Rewrite every llm_name === fromName to toName across all elements (and any
+// nested children), so renaming or removing an AgentLLM propagates fully and
+// never leaves a dangling reference behind.
+const remapLlmReferences = (
+  elements: Record<string, unknown> | undefined,
+  fromName: string,
+  toName: string,
+): void => {
+  const visit = (entry: any): void => {
+    if (!entry || typeof entry !== 'object') return;
+    if (LLM_REFERENCING_TYPES.has(entry.type) && entry.llm_name === fromName) {
+      entry.llm_name = toName;
     }
-
-    const candidate = entry as Partial<AgentModelVariantSnapshot>;
-    return (
-      typeof candidate.id === 'string' &&
-      typeof candidate.profileId === 'string' &&
-      typeof candidate.profileName === 'string' &&
-      typeof candidate.configurationId === 'string' &&
-      typeof candidate.configurationName === 'string' &&
-      typeof candidate.createdAt === 'string' &&
-      Boolean(candidate.model)
-    );
-  });
+    if (Array.isArray(entry.children)) {
+      for (const child of entry.children) visit(child);
+    }
+  };
+  for (const entry of Object.values(elements || {})) {
+    visit(entry);
+  }
 };
 
 const toMappingMatchedRules = (raw: unknown): MappingMatchedRule[] => {
@@ -1084,19 +1091,7 @@ export const AgentConfigurationPanel: React.FC = () => {
       const isRename = typeof patch.name === 'string' && patch.name !== previousName;
       const newName = isRename ? (patch.name as string) : previousName;
       if (isRename && previousName) {
-        // State members live as top-level elements (AgentStateBody / AgentStateFallbackBody), not nested.
-        for (const entry of Object.values(nextModel.elements || {}) as any[]) {
-          if (!entry || typeof entry !== 'object') continue;
-          if (
-            (entry.type === 'AgentRagElement' ||
-              entry.type === 'AgentReasoningState' ||
-              entry.type === 'AgentStateBody' ||
-              entry.type === 'AgentStateFallbackBody') &&
-            entry.llm_name === previousName
-          ) {
-            entry.llm_name = newName;
-          }
-        }
+        remapLlmReferences(nextModel.elements, previousName, newName);
       }
       const renamedDefault =
         isRename && defaultLlmName === previousName ? newName || undefined : defaultLlmName;
@@ -1130,19 +1125,8 @@ export const AgentConfigurationPanel: React.FC = () => {
       delete nextElements[id];
       nextModel.elements = nextElements;
       if (removedName) {
-        // Empty llm_name means "use default"; members are top-level (AgentStateBody / AgentStateFallbackBody).
-        for (const entry of Object.values(nextModel.elements || {}) as any[]) {
-          if (!entry || typeof entry !== 'object') continue;
-          if (
-            (entry.type === 'AgentRagElement' ||
-              entry.type === 'AgentReasoningState' ||
-              entry.type === 'AgentStateBody' ||
-              entry.type === 'AgentStateFallbackBody') &&
-            entry.llm_name === removedName
-          ) {
-            entry.llm_name = '';
-          }
-        }
+        // Empty llm_name means "use default".
+        remapLlmReferences(nextModel.elements, removedName, '');
       }
       setExpandedLlmId((prev) => (prev === id ? null : prev));
       const resolved = resolveDefaultLlm(nextModel, defaultLlmName);

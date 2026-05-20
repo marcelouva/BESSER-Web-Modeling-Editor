@@ -95,12 +95,11 @@ export abstract class AgentStateMember extends UMLElement {
       serialized.dbSqlQuery = this.dbSqlQuery;
     }
 
-    if (
-      this.replyType === 'llm' ||
-      (this.replyType === 'db_reply' && this.dbQueryMode === 'llm_query')
-    ) {
-      serialized.llm_name = this.llm_name;
-    }
+    // Always persist llm_name so a chosen LLM survives a temporary switch of
+    // reply type (e.g. llm -> text -> llm). The backend ignores it for reply
+    // types that do not consume an LLM, so emitting it unconditionally is safe
+    // and keeps serialize/deserialize symmetric.
+    serialized.llm_name = this.llm_name;
 
     return serialized;
   }

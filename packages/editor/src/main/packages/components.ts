@@ -1,11 +1,4 @@
 import { FunctionComponent, PropsWithChildren } from 'react';
-
-// AgentLLM is a data-only element managed exclusively from the agent
-// customization tab; no SVG presence on the canvas. The lookup in
-// canvas-element still happens for every element in the model, so we
-// register a no-op React component to avoid an "undefined component"
-// crash when an AgentLLM is present.
-const AgentLLMNoopComponent: FunctionComponent<PropsWithChildren<{ element: any; fillColor?: string }>> = () => null;
 import { UMLAssociationComponent } from './common/uml-association/uml-association-component';
 import { UMLClassifierComponent } from './common/uml-classifier/uml-classifier-component';
 import { UMLClassifierMemberComponent } from './common/uml-classifier/uml-classifier-member-component';
@@ -109,6 +102,13 @@ import { NNContainerComponent } from './nn-diagram/nn-container/nn-container-com
 import { NNReferenceComponent } from './nn-diagram/nn-reference/nn-reference-component';
 import { NNComponentMemberComponent } from './nn-diagram/nn-component-member-component';
 import { NNLayerIconComponent } from './nn-diagram/nn-layer-icon/nn-layer-icon-component';
+
+// AgentLLM is a data-only element managed exclusively from the agent
+// customization tab; no SVG presence on the canvas. The lookup in
+// canvas-element still happens for every element in the model, so we
+// register a no-op React component to avoid an "undefined component"
+// crash when an AgentLLM is present.
+const AgentLLMNoopComponent: FunctionComponent<PropsWithChildren<{ element: any; fillColor?: string }>> = () => null;
 
 export const Components: {
   [key in UMLElementType | UMLRelationshipType]:
