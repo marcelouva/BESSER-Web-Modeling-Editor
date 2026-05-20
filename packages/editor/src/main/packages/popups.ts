@@ -48,6 +48,10 @@ import { AgentIntentBodyUpdate } from './agent-state-diagram/agent-intent-object
 import { AgentRagElementUpdate } from './agent-state-diagram/agent-rag-element/agent-rag-element-update';
 import { AgentStateUpdate } from './agent-state-diagram/agent-state/agent-state-update';
 import { AgentStateTransitionUpdate } from './agent-state-diagram/agent-state-transition/agent-state-transition-update';
+import { AgentToolUpdate } from './agent-state-diagram/agent-tool/agent-tool-update';
+import { AgentSkillUpdate } from './agent-state-diagram/agent-skill/agent-skill-update';
+import { AgentWorkspaceUpdate } from './agent-state-diagram/agent-workspace/agent-workspace-update';
+import { AgentReasoningStateUpdate } from './agent-state-diagram/agent-reasoning-state/agent-reasoning-state-update';
 import UMLUserModelAttributeUpdate from './user-modeling/uml-user-model-attribute/uml-user-model-attribute-update';
 
 import { NNElementType } from './nn-diagram';
@@ -136,6 +140,13 @@ export const Popups: { [key in UMLElementType | UMLRelationshipType]: ComponentT
   [UMLElementType.AgentState]: AgentStateUpdate,
   [UMLElementType.AgentStateBody]: null,
   [UMLElementType.AgentStateFallbackBody]: null,
+  [UMLElementType.AgentTool]: AgentToolUpdate,
+  [UMLElementType.AgentSkill]: AgentSkillUpdate,
+  [UMLElementType.AgentWorkspace]: AgentWorkspaceUpdate,
+  [UMLElementType.AgentReasoningState]: AgentReasoningStateUpdate,
+  [UMLElementType.AgentLLM]: null,
+  [UMLElementType.AgentSectionTitle]: null,
+  [UMLElementType.AgentSectionSeparator]: null,
   // [UMLElementType.AgentStateBody]: null,
   // Relationships
   [UMLRelationshipType.ClassAggregation]: UMLClassAssociationUpdate,
