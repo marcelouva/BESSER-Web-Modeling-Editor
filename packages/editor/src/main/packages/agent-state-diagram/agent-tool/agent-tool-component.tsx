@@ -2,6 +2,7 @@ import React, { FunctionComponent } from 'react';
 import { AgentTool } from './agent-tool';
 import { Text } from '../../../components/controls/text/text';
 import { ThemedRect } from '../../../components/theme/themedComponents';
+import { AGENT_PRIMITIVE_COLORS } from '../agent-primitive-colors';
 
 interface Props {
   element: AgentTool;
@@ -20,7 +21,7 @@ export const AgentToolComponent: FunctionComponent<Props> = ({ element, children
   const height = element.bounds.height;
   const cornerRadius = 8;
   const subtitle = truncate(element.description || '', 48);
-  const strokeColor = element.strokeColor || 'currentColor';
+  const accent = element.strokeColor || AGENT_PRIMITIVE_COLORS.tool.accent;
   const textColor = element.textColor || 'currentColor';
 
   return (
@@ -29,10 +30,10 @@ export const AgentToolComponent: FunctionComponent<Props> = ({ element, children
         width="100%"
         height="100%"
         rx={cornerRadius}
-        fillColor={fillColor || element.fillColor}
-        strokeColor={strokeColor}
+        fillColor={fillColor || element.fillColor || AGENT_PRIMITIVE_COLORS.tool.tint}
+        strokeColor={accent}
       />
-      <Text y={22} fill={textColor} fontWeight="bold" fontSize="80%">
+      <Text y={22} fill={accent} fontWeight="bold" fontSize="80%">
         «tool»
       </Text>
       <Text y={42} fill={textColor} fontWeight="bold">

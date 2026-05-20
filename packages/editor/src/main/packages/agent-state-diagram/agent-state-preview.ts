@@ -15,7 +15,6 @@ import { UMLStateCodeBlock } from '../uml-state-diagram/uml-state-code-block/uml
 
 import { AgentState } from './agent-state/agent-state';
 import { AgentStateBody } from './agent-state-body/agent-state-body';
-import { AgentStateFallbackBody } from './agent-state-fallback-body/agent-state-fallback-body';
 import { AgentTool } from './agent-tool/agent-tool';
 import { AgentSkill } from './agent-skill/agent-skill';
 import { AgentWorkspace } from './agent-workspace/agent-workspace';
@@ -29,45 +28,30 @@ export const composeBotPreview: ComposePreview = (
   layer: ILayer,
   translate: (id: string) => string,
 ): UMLElement[] => {
-  const elements: UMLElement[] = [];
-  //UMLStateForkNode.defaultWidth = Math.round(20 / 10) * 10;
-  //UMLStateForkNode.defaultHeight = Math.round(60 / 10) * 10;
-  //UMLStateForkNodeHorizontal.defaultWidth = Math.round(60 / 10) * 10;
-  //UMLStateForkNodeHorizontal.defaultHeight = Math.round(20 / 10) * 10;
-  
-  const emptyIntent = new AgentIntent({ name: "Intent Name" });
-  emptyIntent.bounds = {
-    ...emptyIntent.bounds,
-    width: emptyIntent.bounds.width,
-    height: emptyIntent.bounds.height,
+  // Build every preview element first, then push in the palette's display
+  // order below (flow/states → reasoning → reasoning primitives → knowledge).
+
+  // State Initial Node
+  const stateInitialNode = new UMLStateInitialNode({
+    bounds: { x: 0, y: 0, width: 45, height: 45 },
+  });
+
+  // Empty State
+  const emptyAgentState = new AgentState({ name: "AgentState" });
+  emptyAgentState.bounds = {
+    ...emptyAgentState.bounds,
+    width: emptyAgentState.bounds.width,
+    height: emptyAgentState.bounds.height,
   };
-  elements.push(emptyIntent);
 
-  const ragElement = new AgentRagElement({ name: 'RAG DB Name' });
-  ragElement.bounds = {
-    ...ragElement.bounds,
-    width: computeDimension(1.0, ragElement.bounds.width),
-    height: computeDimension(1.0, ragElement.bounds.height),
+  // State with Body
+  const agentState = new AgentState({ name: "AgentState" });
+  agentState.bounds = {
+    ...agentState.bounds,
+    width: agentState.bounds.width,
+    height: agentState.bounds.height,
   };
-  ragElement.render(layer);
-  elements.push(ragElement);
-
-   // Empty State
-   const emptyAgentState = new AgentState({ name: "AgentState" });
-   emptyAgentState.bounds = {
-     ...emptyAgentState.bounds,
-     width: emptyAgentState.bounds.width,
-     height: emptyAgentState.bounds.height,
-   };
-   elements.push(emptyAgentState);
-
-   const agentState = new AgentState({ name: "AgentState" });
-   agentState.bounds = {
-     ...agentState.bounds,
-     width: agentState.bounds.width,
-     height: agentState.bounds.height,
-   };
-   const botBody = new AgentStateBody({
+  const botBody = new AgentStateBody({
     name: "Body",
     owner: agentState.id,
     bounds: {
@@ -78,43 +62,7 @@ export const composeBotPreview: ComposePreview = (
     },
   });
   agentState.ownedElements = [botBody.id];
-  elements.push(...(agentState.render(layer, [botBody]) as UMLElement[]));
-  
-  // State with Body and Fallback Body
-  const stateWithBothBodies = new AgentState({ name: "AgentState" });
-  stateWithBothBodies.bounds = {
-    ...stateWithBothBodies.bounds,
-    width: stateWithBothBodies.bounds.width,
-    height: stateWithBothBodies.bounds.height,
-  };
-  const stateBody2 = new AgentStateBody({
-    name: "Body",
-    owner: stateWithBothBodies.id,
-    bounds: {
-      x: 0,
-      y: 0,
-      width: computeDimension(1.0, 200),
-      height: computeDimension(1.0, 30),
-    },
-  });
-  const fallbackBody = new AgentStateFallbackBody({
-    name: "Fallback Body",
-    owner: stateWithBothBodies.id,
-    bounds: {
-      x: 0,
-      y: 40,
-      width: computeDimension(1.0, 200),
-      height: computeDimension(1.0, 30),
-    },
-  });
-  stateWithBothBodies.ownedElements = [stateBody2.id, fallbackBody.id];
-  elements.push(...(stateWithBothBodies.render(layer, [stateBody2, fallbackBody]) as UMLElement[]));
-
-  // State Initial Node
-  const stateInitialNode = new UMLStateInitialNode({
-    bounds: { x: 0, y: 0, width: 45, height: 45 },
-  });
-  elements.push(stateInitialNode);
+  const agentStateRendered = agentState.render(layer, [botBody]) as UMLElement[];
 
   const reasoningState = new AgentReasoningState({ name: 'ReasoningState' });
   reasoningState.bounds = {
@@ -123,7 +71,6 @@ export const composeBotPreview: ComposePreview = (
     height: computeDimension(1.0, 80),
   };
   reasoningState.render(layer);
-  elements.push(reasoningState);
 
   const toolElement = new AgentTool({ name: 'tool_name', description: 'What this tool does' });
   toolElement.bounds = {
@@ -132,7 +79,6 @@ export const composeBotPreview: ComposePreview = (
     height: computeDimension(1.0, toolElement.bounds.height),
   };
   toolElement.render(layer);
-  elements.push(toolElement);
 
   const skillElement = new AgentSkill({ name: 'skill_name', description: 'What this skill teaches' });
   skillElement.bounds = {
@@ -141,7 +87,6 @@ export const composeBotPreview: ComposePreview = (
     height: computeDimension(1.0, skillElement.bounds.height),
   };
   skillElement.render(layer);
-  elements.push(skillElement);
 
   const workspaceElement = new AgentWorkspace({ name: 'workspace_name', path: '/path/to/dir' });
   workspaceElement.bounds = {
@@ -150,15 +95,34 @@ export const composeBotPreview: ComposePreview = (
     height: computeDimension(1.0, workspaceElement.bounds.height),
   };
   workspaceElement.render(layer);
-  elements.push(workspaceElement);
 
-  // // State Final Node
-  // const stateFinalNode = new UMLStateFinalNode({
-  //   bounds: { x: 0, y: 0, width: 45, height: 45 },
-  // });
-  // elements.push(stateFinalNode);
+  const emptyIntent = new AgentIntent({ name: "Intent Name" });
+  emptyIntent.bounds = {
+    ...emptyIntent.bounds,
+    width: emptyIntent.bounds.width,
+    height: emptyIntent.bounds.height,
+  };
 
- 
+  const ragElement = new AgentRagElement({ name: 'RAG DB Name' });
+  ragElement.bounds = {
+    ...ragElement.bounds,
+    width: computeDimension(1.0, ragElement.bounds.width),
+    height: computeDimension(1.0, ragElement.bounds.height),
+  };
+  ragElement.render(layer);
+
+  // Display order: flow/states → reasoning → reasoning primitives → knowledge.
+  const elements: UMLElement[] = [
+    stateInitialNode,
+    emptyAgentState,
+    ...agentStateRendered,
+    reasoningState,
+    toolElement,
+    skillElement,
+    workspaceElement,
+    emptyIntent,
+    ragElement,
+  ];
 
   return elements;
 };

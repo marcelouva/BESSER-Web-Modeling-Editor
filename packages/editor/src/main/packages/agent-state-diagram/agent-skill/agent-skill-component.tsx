@@ -2,6 +2,7 @@ import React, { FunctionComponent } from 'react';
 import { AgentSkill } from './agent-skill';
 import { Text } from '../../../components/controls/text/text';
 import { ThemedRect } from '../../../components/theme/themedComponents';
+import { AGENT_PRIMITIVE_COLORS } from '../agent-primitive-colors';
 
 interface Props {
   element: AgentSkill;
@@ -20,7 +21,7 @@ export const AgentSkillComponent: FunctionComponent<Props> = ({ element, childre
   const height = element.bounds.height;
   const cornerRadius = 8;
   const subtitle = truncate(element.description || element.content || '', 48);
-  const strokeColor = element.strokeColor || 'currentColor';
+  const accent = element.strokeColor || AGENT_PRIMITIVE_COLORS.skill.accent;
   const textColor = element.textColor || 'currentColor';
 
   return (
@@ -29,10 +30,10 @@ export const AgentSkillComponent: FunctionComponent<Props> = ({ element, childre
         width="100%"
         height="100%"
         rx={cornerRadius}
-        fillColor={fillColor || element.fillColor}
-        strokeColor={strokeColor}
+        fillColor={fillColor || element.fillColor || AGENT_PRIMITIVE_COLORS.skill.tint}
+        strokeColor={accent}
       />
-      <Text y={22} fill={textColor} fontWeight="bold" fontSize="80%">
+      <Text y={22} fill={accent} fontWeight="bold" fontSize="80%">
         «skill»
       </Text>
       <Text y={42} fill={textColor} fontWeight="bold">
