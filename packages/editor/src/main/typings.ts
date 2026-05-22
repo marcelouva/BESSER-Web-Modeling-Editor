@@ -66,6 +66,7 @@ export type UMLModelElement = {
 };
 
 export interface AgentModelElement extends UMLModelElement {
+  actionType?: string;
   replyType: string;
   ragDatabaseName?: string;
   dbSelectionType?: string;
@@ -148,9 +149,22 @@ export interface UMLState extends UMLElement {
 
 export interface AgentState extends UMLElement {
   type: UMLElementType;
-  bodies: string[];
-  fallbackBodies: string[];
-  replyType: string;
+  // canonical keys
+  actions: string[];
+  fallbackActions: string[];
+  stateType?: string;
+  fallbackBodyEnabled?: boolean;
+  // reasoning-state fields (used when stateType = 'reasoning')
+  llm_name?: string;
+  max_steps?: number;
+  enable_task_planning?: boolean;
+  stream_steps?: boolean;
+  system_prompt?: string;
+  fallback_message?: string;
+  // legacy backward-compat keys
+  bodies?: string[];
+  fallbackBodies?: string[];
+  replyType?: string;
 }
 
 export interface AgentIntent extends UMLElement {

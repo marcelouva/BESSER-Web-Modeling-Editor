@@ -67,8 +67,27 @@ export abstract class AgentStateMember extends UMLElement {
   }
 
 
+  // Maps internal replyType values to metamodel class names used in actionType.
+  static readonly REPLY_TYPE_TO_ACTION_TYPE: Record<string, string> = {
+    text: 'TextReplyAction',
+    llm: 'LLMReplyAction',
+    rag: 'RAGReplyAction',
+    db_reply: 'DBAction',
+    code: 'CustomCodeAction',
+  };
+
+  // Reverse map: actionType class names → internal replyType values (for deserialization compat).
+  static readonly ACTION_TYPE_TO_REPLY_TYPE: Record<string, string> = {
+    TextReplyAction: 'text',
+    LLMReplyAction: 'llm',
+    RAGReplyAction: 'rag',
+    DBAction: 'db_reply',
+    CustomCodeAction: 'code',
+  };
+
   /** Serializes an `UMLElement` to an `Apollon.UMLElement` */
   serialize(children?: UMLElement[]): Apollon.AgentModelElement {
+    const actionType = AgentStateMember.REPLY_TYPE_TO_ACTION_TYPE[this.replyType] ?? this.replyType;
     const serialized: Apollon.AgentModelElement = {
       id: this.id,
       name: this.name,
@@ -80,6 +99,9 @@ export abstract class AgentStateMember extends UMLElement {
       strokeColor: this.strokeColor,
       textColor: this.textColor,
       assessmentNote: this.assessmentNote,
+      // Emit new canonical key (actionType with metamodel class name).
+      actionType,
+      // Keep legacy key so old backend consumers can still read the diagram.
       replyType: this.replyType,
     };
 
@@ -104,35 +126,41 @@ export abstract class AgentStateMember extends UMLElement {
     return serialized;
   }
 
-    deserialize<T extends Apollon.UMLModelElement>(values: T & {
-      replyType: string;
-      ragDatabaseName?: string;
-      dbSelectionType?: string;
-      dbCustomName?: string;
-      dbQueryMode?: string;
-      dbOperation?: string;
-      dbSqlQuery?: string;
-      llm_name?: string;
-    }) {
-      this.id = values.id;
-      this.name = values.name;
-      this.type = values.type;
-      this.owner = values.owner || null;
-      this.bounds = { ...values.bounds };
-      this.highlight = values.highlight;
-      this.fillColor = values.fillColor;
-      this.strokeColor = values.strokeColor;
-      this.textColor = values.textColor;
-      this.assessmentNote = values.assessmentNote;
-      this.replyType = values.replyType;
-      this.ragDatabaseName = values.ragDatabaseName ?? '';
-      this.dbSelectionType = values.dbSelectionType ?? 'default';
-      this.dbCustomName = values.dbCustomName ?? '';
-      this.dbQueryMode = values.dbQueryMode ?? 'llm_query';
-      this.dbOperation = values.dbOperation ?? 'any';
-      this.dbSqlQuery = values.dbSqlQuery ?? '';
-      this.llm_name = values.llm_name ?? '';
+  deserialize<T extends Apollon.UMLModelElement>(values: T & {
+    actionType?: string;
+    replyType?: string;
+    ragDatabaseName?: string;
+    dbSelectionType?: string;
+    dbCustomName?: string;
+    dbQueryMode?: string;
+    dbOperation?: string;
+    dbSqlQuery?: string;
+    llm_name?: string;
+  }) {
+    this.id = values.id;
+    this.name = values.name;
+    this.type = values.type;
+    this.owner = values.owner || null;
+    this.bounds = { ...values.bounds };
+    this.highlight = values.highlight;
+    this.fillColor = values.fillColor;
+    this.strokeColor = values.strokeColor;
+    this.textColor = values.textColor;
+    this.assessmentNote = values.assessmentNote;
+    // Prefer new actionType; fall back to legacy replyType for backward compat.
+    if (values.actionType) {
+      this.replyType = AgentStateMember.ACTION_TYPE_TO_REPLY_TYPE[values.actionType] ?? values.actionType;
+    } else {
+      this.replyType = values.replyType ?? 'text';
     }
+    this.ragDatabaseName = values.ragDatabaseName ?? '';
+    this.dbSelectionType = values.dbSelectionType ?? 'default';
+    this.dbCustomName = values.dbCustomName ?? '';
+    this.dbQueryMode = values.dbQueryMode ?? 'llm_query';
+    this.dbOperation = values.dbOperation ?? 'any';
+    this.dbSqlQuery = values.dbSqlQuery ?? '';
+    this.llm_name = values.llm_name ?? '';
+  }
 
   render(layer: ILayer): ILayoutable[] {
     const radix = 10;
