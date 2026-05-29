@@ -728,7 +728,7 @@ class StateUpdate extends Component<Props, State> {
         member.name = 'Enter reply message';
         break;
       case 'llm':
-        member.name = 'AI response';
+        member.name = 'LLM Reply';
         break;
       case 'rag': {
         member.ragDatabaseName = '';
@@ -776,6 +776,7 @@ class StateUpdate extends Component<Props, State> {
       dbOperation: m.dbOperation,
       dbSqlQuery: m.dbSqlQuery,
       llm_name: m.llm_name,
+      system_message: m.system_message,
     });
     this.props.update<AgentStateMember>(a.id, fieldsOf(b));
     this.props.update<AgentStateMember>(b.id, fieldsOf(a));
@@ -794,6 +795,13 @@ class StateUpdate extends Component<Props, State> {
         <option value="">(use default)</option>
         {llmNames.map((n) => <option key={`${fieldId}-${n}`} value={n}>{n}</option>)}
       </LlmSelect>
+      <Header style={{ marginTop: 6 }}>System message</Header>
+      <Textfield
+        outline
+        value={member.system_message || ''}
+        onChange={(value) => this.props.update<AgentStateMember>(member.id, { system_message: value })}
+        placeholder="You are a helpful assistant."
+      />
     </LlmFieldRow>
   );
 

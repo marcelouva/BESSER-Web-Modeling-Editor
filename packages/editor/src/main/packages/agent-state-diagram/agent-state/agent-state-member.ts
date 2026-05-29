@@ -16,6 +16,7 @@ interface IAgentStateMemberValues extends IUMLElement {
   dbOperation?: string;
   dbSqlQuery?: string;
   llm_name?: string;
+  system_message?: string;
 }
 
 export abstract class AgentStateMember extends UMLElement {
@@ -39,6 +40,7 @@ export abstract class AgentStateMember extends UMLElement {
   dbOperation: string = 'any';
   dbSqlQuery: string = '';
   llm_name: string = '';
+  system_message: string = '';
 
   constructor(values?: DeepPartial<IAgentStateMemberValues>) {
     super(values);
@@ -63,6 +65,9 @@ export abstract class AgentStateMember extends UMLElement {
     }
     if (values?.llm_name !== undefined) {
       this.llm_name = values.llm_name ?? '';
+    }
+    if (values?.system_message !== undefined) {
+      this.system_message = values.system_message ?? '';
     }
   }
 
@@ -123,6 +128,10 @@ export abstract class AgentStateMember extends UMLElement {
     // and keeps serialize/deserialize symmetric.
     serialized.llm_name = this.llm_name;
 
+    if (this.replyType === 'llm') {
+      serialized.system_message = this.system_message;
+    }
+
     return serialized;
   }
 
@@ -160,6 +169,7 @@ export abstract class AgentStateMember extends UMLElement {
     this.dbOperation = values.dbOperation ?? 'any';
     this.dbSqlQuery = values.dbSqlQuery ?? '';
     this.llm_name = values.llm_name ?? '';
+    this.system_message = values.system_message ?? '';
   }
 
   render(layer: ILayer): ILayoutable[] {
