@@ -81,6 +81,7 @@ export abstract class AgentStateMember extends UMLElement {
   static readonly REPLY_TYPE_TO_ACTION_TYPE: Record<string, string> = {
     text: 'TextReplyAction',
     llm: 'LLMReplyAction',
+    llm_chat: 'LLMChatAction',
     rag: 'RAGReplyAction',
     db_reply: 'DBAction',
     code: 'CustomCodeAction',
@@ -90,6 +91,7 @@ export abstract class AgentStateMember extends UMLElement {
   static readonly ACTION_TYPE_TO_REPLY_TYPE: Record<string, string> = {
     TextReplyAction: 'text',
     LLMReplyAction: 'llm',
+    LLMChatAction: 'llm_chat',
     RAGReplyAction: 'rag',
     DBAction: 'db_reply',
     CustomCodeAction: 'code',
@@ -134,7 +136,7 @@ export abstract class AgentStateMember extends UMLElement {
     // and keeps serialize/deserialize symmetric.
     serialized.llm_name = this.llm_name;
 
-    if (this.replyType === 'llm') {
+    if (this.replyType === 'llm' || this.replyType === 'llm_chat') {
       serialized.system_message = this.system_message;
     }
 

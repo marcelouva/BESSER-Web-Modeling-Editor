@@ -265,6 +265,7 @@ interface State {
 const ACTION_TYPE_LABELS: Record<string, string> = {
   text: 'Text Reply',
   llm: 'LLM Reply',
+  llm_chat: 'LLM Chat',
   rag: 'RAG Reply',
   db_reply: 'DB Action',
   code: 'Python Code',
@@ -328,14 +329,23 @@ class StateUpdate extends Component<Props, State> {
       ),
     );
     const AGENT_LLM_TYPE = (AgentElementType as Record<string, string>).AgentLLM ?? 'AgentLLM';
-    const llmNames = Array.from(
-      new Set(
+    const llmEntries = Array.from(
+      new Map(
         Object.values(elements)
           .filter((el: any) => el.type === AGENT_LLM_TYPE && typeof el.name === 'string')
-          .map((el: any) => el.name.trim())
-          .filter((n) => n.length > 0),
-      ),
+          .map((el: any) => {
+            const name = String(el.name).trim();
+            return [name, { name, provider: String((el as any).provider || '').toLowerCase() } as const];
+          })
+          .filter(([name]) => name.length > 0),
+      ).values(),
     );
+    const llmNames = llmEntries.map((entry) => entry.name);
+    const llmProviderByName = llmEntries.reduce<Record<string, string>>((acc, entry) => {
+      acc[entry.name] = entry.provider;
+      return acc;
+    }, {});
+    const hasCompatibleChatLlm = llmEntries.some((entry) => this.isChatCompatibleProvider(entry.provider));
 
     const stateType = element.stateType ?? 'standard';
     const fallbackEnabled = element.fallbackBodyEnabled !== false;
@@ -385,7 +395,15 @@ class StateUpdate extends Component<Props, State> {
             <Section><Divider /></Section>
             <Section>
               <SectionHeader>Body</SectionHeader>
-              {this.renderBodySection(bodies, AgentStateBody, ragDatabaseNames, llmNames, 'body')}
+              {this.renderBodySection(
+                bodies,
+                AgentStateBody,
+                ragDatabaseNames,
+                llmNames,
+                llmProviderByName,
+                hasCompatibleChatLlm,
+                'body',
+              )}
             </Section>
 
             <Section><Divider /></Section>
@@ -404,7 +422,15 @@ class StateUpdate extends Component<Props, State> {
               {fallbackEnabled && (
                 <>
                   <SectionHeader style={{ marginTop: 8 }}>Fallback Body</SectionHeader>
-                  {this.renderBodySection(fallbackBodies, AgentStateFallbackBody, ragDatabaseNames, llmNames, 'fallback')}
+                   {this.renderBodySection(
+                     fallbackBodies,
+                     AgentStateFallbackBody,
+                     ragDatabaseNames,
+                     llmNames,
+                     llmProviderByName,
+                     hasCompatibleChatLlm,
+                     'fallback',
+                   )}
                 </>
               )}
             </Section>
@@ -473,6 +499,8 @@ class StateUpdate extends Component<Props, State> {
     Clazz: typeof AgentStateBody | typeof AgentStateFallbackBody,
     ragDatabaseNames: string[],
     llmNames: string[],
+    llmProviderByName: Record<string, string>,
+    hasCompatibleChatLlm: boolean,
     prefix: 'body' | 'fallback',
   ) => {
     const isCustom = actions.some((a) => a.replyType === 'code');
@@ -501,7 +529,15 @@ class StateUpdate extends Component<Props, State> {
 
         {bodyType === 'custom'
           ? this.renderCustomBody(actions, Clazz)
-          : this.renderPredefinedBody(actions, Clazz, ragDatabaseNames, llmNames, prefix)}
+          : this.renderPredefinedBody(
+            actions,
+            Clazz,
+            ragDatabaseNames,
+            llmNames,
+            llmProviderByName,
+            hasCompatibleChatLlm,
+            prefix,
+          )}
       </>
     );
   };
@@ -537,9 +573,15 @@ class StateUpdate extends Component<Props, State> {
     Clazz: typeof AgentStateBody | typeof AgentStateFallbackBody,
     ragDatabaseNames: string[],
     llmNames: string[],
+    llmProviderByName: Record<string, string>,
+    hasCompatibleChatLlm: boolean,
     prefix: 'body' | 'fallback',
   ) => {
     const newActionType = prefix === 'body' ? this.state.newBodyActionType : this.state.newFallbackActionType;
+    const availableActionTypes = hasCompatibleChatLlm
+      ? ['text', 'llm', 'llm_chat', 'rag', 'db_reply']
+      : ['text', 'llm', 'rag', 'db_reply'];
+    const selectedActionType = availableActionTypes.includes(newActionType) ? newActionType : 'text';
     const setNewActionType = (v: string) =>
       prefix === 'body'
         ? this.setState({ newBodyActionType: v })
@@ -602,7 +644,14 @@ class StateUpdate extends Component<Props, State> {
               </ActionCardHeader>
               {isExpanded && (
                 <ActionBody>
-                  {this.renderActionEditor(action, Clazz, ragDatabaseNames, llmNames, `${prefix}-${index}`)}
+                  {this.renderActionEditor(
+                    action,
+                    Clazz,
+                    ragDatabaseNames,
+                    llmNames,
+                    llmProviderByName,
+                    `${prefix}-${index}`,
+                  )}
                 </ActionBody>
               )}
             </ActionCard>
@@ -610,16 +659,22 @@ class StateUpdate extends Component<Props, State> {
         })}
 
         <AddActionRow>
-          <Dropdown value={newActionType} onChange={setNewActionType}>
+          <Dropdown value={selectedActionType} onChange={setNewActionType}>
             {[
               <Dropdown.Item key="text" value="text">Text Reply</Dropdown.Item>,
               <Dropdown.Item key="llm" value="llm">LLM Reply</Dropdown.Item>,
+              ...(hasCompatibleChatLlm
+                ? [<Dropdown.Item key="llm_chat" value="llm_chat">LLM Chat</Dropdown.Item>]
+                : []),
               <Dropdown.Item key="rag" value="rag">RAG Reply</Dropdown.Item>,
               <Dropdown.Item key="db_reply" value="db_reply">DB Action</Dropdown.Item>,
             ]}
           </Dropdown>
           <Button color="primary" onClick={() => {
-            const id = this.addPredefinedAction(Clazz, newActionType);
+            if (selectedActionType === 'llm_chat' && !hasCompatibleChatLlm) {
+              return;
+            }
+            const id = this.addPredefinedAction(Clazz, selectedActionType);
             // Auto-expand newly added action
             if (id) {
               const key = prefix === 'body' ? 'expandedBodyIds' : 'expandedFallbackIds';
@@ -631,6 +686,11 @@ class StateUpdate extends Component<Props, State> {
             Add
           </Button>
         </AddActionRow>
+        {!hasCompatibleChatLlm && (
+          <p style={{ fontSize: 12, margin: '4px 0', opacity: 0.7 }}>
+            LLM Chat is available when at least one Agent LLM uses OpenAI or Hugging Face.
+          </p>
+        )}
       </>
     );
   };
@@ -642,6 +702,7 @@ class StateUpdate extends Component<Props, State> {
     Clazz: typeof AgentStateBody | typeof AgentStateFallbackBody,
     ragDatabaseNames: string[],
     llmNames: string[],
+    llmProviderByName: Record<string, string>,
     fieldId: string,
   ): React.ReactNode => {
     switch (action.replyType) {
@@ -656,25 +717,48 @@ class StateUpdate extends Component<Props, State> {
         );
       case 'llm':
         return this.renderLlmNameField(action, llmNames, `${fieldId}-llm`);
+      case 'llm_chat': {
+        const selectedProvider = action.llm_name ? llmProviderByName[action.llm_name] : '';
+        const hasIncompatibleSelection = Boolean(
+          action.llm_name && selectedProvider && !this.isChatCompatibleProvider(selectedProvider),
+        );
+        return this.renderLlmNameField(action, llmNames, `${fieldId}-llm-chat`, {
+          warning: hasIncompatibleSelection
+            ? 'Selected LLM provider is incompatible with chat(). Use OpenAI or Hugging Face.'
+            : undefined,
+        });
+      }
       case 'rag':
         return ragDatabaseNames.length ? (
-          <Dropdown
-            value={action.ragDatabaseName && action.ragDatabaseName.length > 0 ? action.ragDatabaseName : '__placeholder__'}
-            onChange={(value) => {
-              const selected = value === '__placeholder__' ? '' : value;
-              this.props.update<AgentStateMember>(action.id, {
-                ragDatabaseName: selected,
-                name: this.getRagDisplayName(selected),
-              });
-            }}
-          >
-            {[
-              <Dropdown.Item value="__placeholder__" key="rag-placeholder">Select RAG database</Dropdown.Item>,
-              ...ragDatabaseNames.map((name, i) => (
-                <Dropdown.Item key={`rag-${i}-${name}`} value={name}>{name}</Dropdown.Item>
-              )),
-            ]}
-          </Dropdown>
+          <LlmFieldRow>
+            <Header>RAG database</Header>
+            <Dropdown
+              value={action.ragDatabaseName && action.ragDatabaseName.length > 0 ? action.ragDatabaseName : '__placeholder__'}
+              onChange={(value) => {
+                const selected = value === '__placeholder__' ? '' : value;
+                this.props.update<AgentStateMember>(action.id, {
+                  ragDatabaseName: selected,
+                  name: this.getRagDisplayName(selected),
+                });
+              }}
+            >
+              {[
+                <Dropdown.Item value="__placeholder__" key="rag-placeholder">Select RAG database</Dropdown.Item>,
+                ...ragDatabaseNames.map((name, i) => (
+                  <Dropdown.Item key={`rag-${i}-${name}`} value={name}>{name}</Dropdown.Item>
+                )),
+              ]}
+            </Dropdown>
+            <Header style={{ marginTop: 6 }}>Prompt</Header>
+            <Textfield
+              outline
+              multiline
+              enterToSubmit={false}
+              value={action.prompt || ''}
+              onChange={(value) => this.props.update<AgentStateMember>(action.id, { prompt: value })}
+              placeholder="Optional prompt passed to RAGReply(prompt=...)"
+            />
+          </LlmFieldRow>
         ) : (
           <p style={{ fontSize: 12, margin: '4px 0', opacity: 0.7 }}>
             No RAG databases found. Create one from the palette first.
@@ -695,8 +779,12 @@ class StateUpdate extends Component<Props, State> {
     switch (action.replyType) {
       case 'llm':
         return action.llm_name ? `LLM: ${action.llm_name}` : '(default LLM)';
+      case 'llm_chat':
+        return action.llm_name ? `Chat: ${action.llm_name}` : '(default LLM chat)';
       case 'rag':
-        return action.ragDatabaseName ? `DB: ${action.ragDatabaseName}` : '(select database)';
+        return action.ragDatabaseName
+          ? `DB: ${action.ragDatabaseName}${action.prompt ? ' (prompt)' : ''}`
+          : '(select database)';
       default:
         return truncate(name);
     }
@@ -729,6 +817,9 @@ class StateUpdate extends Component<Props, State> {
         break;
       case 'llm':
         member.name = 'LLM Reply';
+        break;
+      case 'llm_chat':
+        member.name = 'LLM Chat Reply';
         break;
       case 'rag': {
         member.ragDatabaseName = '';
@@ -786,7 +877,21 @@ class StateUpdate extends Component<Props, State> {
 
   // ─── Helper renderers ─────────────────────────────────────────────────────────
 
-  private renderLlmNameField = (member: AgentStateMember, llmNames: string[], fieldId: string) => (
+  private renderLlmNameField = (
+    member: AgentStateMember,
+    llmNames: string[],
+    fieldId: string,
+    options?: { warning?: string },
+  ) => (
+    this.renderLlmNameFieldWithOptions(member, llmNames, fieldId, options)
+  );
+
+  private renderLlmNameFieldWithOptions = (
+    member: AgentStateMember,
+    llmNames: string[],
+    fieldId: string,
+    options?: { warning?: string },
+  ) => (
     <LlmFieldRow>
       <Header>LLM</Header>
       <LlmSelect
@@ -811,6 +916,8 @@ class StateUpdate extends Component<Props, State> {
       />
     </LlmFieldRow>
   );
+
+  private isChatCompatibleProvider = (provider: string): boolean => provider === 'openai' || provider === 'huggingface';
 
   private renderDbReplyEditor = (
     member: AgentStateMember | undefined,
