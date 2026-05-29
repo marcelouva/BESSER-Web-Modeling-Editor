@@ -69,6 +69,7 @@ export interface AgentModelElement extends UMLModelElement {
   actionType?: string;
   replyType: string;
   ragDatabaseName?: string;
+  prompt?: string;
   dbSelectionType?: string;
   dbCustomName?: string;
   dbQueryMode?: string;
@@ -176,6 +177,10 @@ export interface AgentIntent extends UMLElement {
 
 export interface AgentRagElement extends UMLElement {
   type: UMLElementType;
+  llm_name?: string;
+  llm_prompt?: string;
+  k?: number;
+  num_previous_messages?: number;
 }
 
 export interface UMLReply extends UMLElement {

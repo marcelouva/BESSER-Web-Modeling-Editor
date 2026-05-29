@@ -732,6 +732,7 @@ class StateUpdate extends Component<Props, State> {
         break;
       case 'rag': {
         member.ragDatabaseName = '';
+        member.prompt = '';
         member.name = this.getRagDisplayName('');
         break;
       }
@@ -770,6 +771,7 @@ class StateUpdate extends Component<Props, State> {
       name: m.name,
       replyType: m.replyType,
       ragDatabaseName: m.ragDatabaseName,
+      prompt: m.prompt,
       dbSelectionType: m.dbSelectionType,
       dbCustomName: m.dbCustomName,
       dbQueryMode: m.dbQueryMode,
@@ -795,6 +797,11 @@ class StateUpdate extends Component<Props, State> {
         <option value="">(use default)</option>
         {llmNames.map((n) => <option key={`${fieldId}-${n}`} value={n}>{n}</option>)}
       </LlmSelect>
+      {options?.warning && (
+        <p style={{ fontSize: 12, margin: '4px 0', opacity: 0.7 }}>
+          {options.warning}
+        </p>
+      )}
       <Header style={{ marginTop: 6 }}>System message</Header>
       <Textfield
         outline

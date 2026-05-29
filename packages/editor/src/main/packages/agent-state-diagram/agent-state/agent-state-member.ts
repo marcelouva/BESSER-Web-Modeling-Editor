@@ -10,6 +10,7 @@ import * as Apollon from '../../../typings';
 
 interface IAgentStateMemberValues extends IUMLElement {
   ragDatabaseName?: string;
+  prompt?: string;
   dbSelectionType?: string;
   dbCustomName?: string;
   dbQueryMode?: string;
@@ -34,6 +35,7 @@ export abstract class AgentStateMember extends UMLElement {
   bounds: IBoundary = { ...this.bounds, height: computeDimension(1.0, 30) };
   replyType: string = "text";
   ragDatabaseName: string = '';
+  prompt: string = '';
   dbSelectionType: string = 'default';
   dbCustomName: string = '';
   dbQueryMode: string = 'llm_query';
@@ -47,6 +49,9 @@ export abstract class AgentStateMember extends UMLElement {
     assign<IUMLElement>(this, values);
     if (values?.ragDatabaseName !== undefined) {
       this.ragDatabaseName = values.ragDatabaseName ?? '';
+    }
+    if (values?.prompt !== undefined) {
+      this.prompt = values.prompt ?? '';
     }
     if (values?.dbSelectionType !== undefined) {
       this.dbSelectionType = values.dbSelectionType ?? 'default';
@@ -112,6 +117,7 @@ export abstract class AgentStateMember extends UMLElement {
 
     if (this.replyType === 'rag') {
       serialized.ragDatabaseName = this.ragDatabaseName;
+      serialized.prompt = this.prompt;
     }
 
     if (this.replyType === 'db_reply') {
@@ -139,6 +145,7 @@ export abstract class AgentStateMember extends UMLElement {
     actionType?: string;
     replyType?: string;
     ragDatabaseName?: string;
+    prompt?: string;
     dbSelectionType?: string;
     dbCustomName?: string;
     dbQueryMode?: string;
@@ -163,6 +170,7 @@ export abstract class AgentStateMember extends UMLElement {
       this.replyType = values.replyType ?? 'text';
     }
     this.ragDatabaseName = values.ragDatabaseName ?? '';
+    this.prompt = values.prompt ?? '';
     this.dbSelectionType = values.dbSelectionType ?? 'default';
     this.dbCustomName = values.dbCustomName ?? '';
     this.dbQueryMode = values.dbQueryMode ?? 'llm_query';
