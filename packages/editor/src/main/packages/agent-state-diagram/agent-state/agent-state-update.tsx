@@ -269,6 +269,7 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   rag: 'RAG Reply',
   db_reply: 'DB Action',
   code: 'Python Code',
+  web_crawl_llm: 'Web Crawl + LLM',
 };
 
 const enhance = compose<ComponentClass<OwnProps>>(
@@ -579,8 +580,8 @@ class StateUpdate extends Component<Props, State> {
   ) => {
     const newActionType = prefix === 'body' ? this.state.newBodyActionType : this.state.newFallbackActionType;
     const availableActionTypes = hasCompatibleChatLlm
-      ? ['text', 'llm', 'llm_chat', 'rag', 'db_reply']
-      : ['text', 'llm', 'rag', 'db_reply'];
+      ? ['text', 'llm', 'llm_chat', 'rag', 'db_reply', 'web_crawl_llm']
+      : ['text', 'llm', 'rag', 'db_reply', 'web_crawl_llm'];
     const selectedActionType = availableActionTypes.includes(newActionType) ? newActionType : 'text';
     const setNewActionType = (v: string) =>
       prefix === 'body'
@@ -668,6 +669,7 @@ class StateUpdate extends Component<Props, State> {
                 : []),
               <Dropdown.Item key="rag" value="rag">RAG Reply</Dropdown.Item>,
               <Dropdown.Item key="db_reply" value="db_reply">DB Action</Dropdown.Item>,
+              <Dropdown.Item key="web_crawl_llm" value="web_crawl_llm">Web Crawl + LLM</Dropdown.Item>,
             ]}
           </Dropdown>
           <Button color="primary" onClick={() => {
@@ -766,6 +768,8 @@ class StateUpdate extends Component<Props, State> {
         );
       case 'db_reply':
         return this.renderDbReplyEditor(action, Clazz, llmNames);
+      case 'web_crawl_llm':
+        return this.renderWebCrawlLlmEditor(action, llmNames);
       default:
         return null;
     }
@@ -785,6 +789,10 @@ class StateUpdate extends Component<Props, State> {
         return action.ragDatabaseName
           ? `DB: ${action.ragDatabaseName}${action.prompt ? ' (prompt)' : ''}`
           : '(select database)';
+      case 'web_crawl_llm':
+        return action.initial_url
+          ? `Crawl: ${truncate(action.initial_url, 30)}${action.run_crawl ? '' : ' (no crawl)'}`
+          : '(set URL)';
       default:
         return truncate(name);
     }
@@ -835,6 +843,17 @@ class StateUpdate extends Component<Props, State> {
         );
         break;
       }
+      case 'web_crawl_llm':
+        member.initial_url = '';
+        member.max_depth = 2;
+        member.max_pages = 20;
+        member.crawl_format = 'markdown';
+        member.base_url_prefix = '';
+        member.run_crawl = true;
+        member.no_crawl_error_message = 'No web crawl data is available yet.';
+        member.system_message_prefix = '';
+        member.name = 'Web Crawl + LLM (set URL)';
+        break;
       default:
         member.name = replyType;
     }
@@ -870,6 +889,14 @@ class StateUpdate extends Component<Props, State> {
       dbSqlQuery: m.dbSqlQuery,
       llm_name: m.llm_name,
       system_message: m.system_message,
+      initial_url: m.initial_url,
+      max_depth: m.max_depth,
+      max_pages: m.max_pages,
+      crawl_format: m.crawl_format,
+      base_url_prefix: m.base_url_prefix,
+      run_crawl: m.run_crawl,
+      no_crawl_error_message: m.no_crawl_error_message,
+      system_message_prefix: m.system_message_prefix,
     });
     this.props.update<AgentStateMember>(a.id, fieldsOf(b));
     this.props.update<AgentStateMember>(b.id, fieldsOf(a));
@@ -1004,6 +1031,103 @@ class StateUpdate extends Component<Props, State> {
           )}
         </DbFieldRow>
       </>
+    );
+  };
+
+  private renderWebCrawlLlmEditor = (
+    member: AgentStateMember,
+    llmNames: string[],
+  ) => {
+    const crawl_format = member.crawl_format || 'markdown';
+    return (
+      <LlmFieldRow>
+        <Header>Initial URL</Header>
+        <Textfield
+          outline
+          value={member.initial_url || ''}
+          onChange={(value) => {
+            this.props.update<AgentStateMember>(member.id, {
+              initial_url: value,
+              name: value ? `Crawl: ${value.slice(0, 40)}` : 'Web Crawl + LLM (set URL)',
+            });
+          }}
+          placeholder="https://example.com"
+        />
+        <Header style={{ marginTop: 6 }}>Base URL prefix (optional)</Header>
+        <Textfield
+          outline
+          value={member.base_url_prefix || ''}
+          onChange={(value) => this.props.update<AgentStateMember>(member.id, { base_url_prefix: value })}
+          placeholder="https://example.com/docs"
+        />
+        <DbFieldRow style={{ marginTop: 6 }}>
+          <label>Max depth</label>
+          <Textfield
+            outline
+            value={member.max_depth ?? 2}
+            onChange={(value) => {
+              const parsed = parseInt(String(value), 10);
+              this.props.update<AgentStateMember>(member.id, { max_depth: Number.isNaN(parsed) ? 2 : parsed });
+            }}
+          />
+        </DbFieldRow>
+        <DbFieldRow>
+          <label>Max pages</label>
+          <Textfield
+            outline
+            value={member.max_pages ?? 20}
+            onChange={(value) => {
+              const parsed = parseInt(String(value), 10);
+              this.props.update<AgentStateMember>(member.id, { max_pages: Number.isNaN(parsed) ? 20 : parsed });
+            }}
+          />
+        </DbFieldRow>
+        <Header style={{ marginTop: 6 }}>Crawl format</Header>
+        <LlmSelect
+          value={crawl_format}
+          onChange={(e) => this.props.update<AgentStateMember>(member.id, { crawl_format: e.target.value })}
+        >
+          <option value="markdown">Markdown</option>
+          <option value="text">Plain text</option>
+          <option value="html">HTML</option>
+        </LlmSelect>
+        <CheckboxRow style={{ marginTop: 6 }}>
+          <input
+            type="checkbox"
+            checked={member.run_crawl !== false}
+            onChange={(e) => this.props.update<AgentStateMember>(member.id, { run_crawl: e.target.checked })}
+          />
+          Run crawl (uncheck to reuse cached result)
+        </CheckboxRow>
+        {member.run_crawl === false && (
+          <>
+            <Header style={{ marginTop: 6 }}>No-crawl error message</Header>
+            <Textfield
+              outline
+              value={member.no_crawl_error_message || ''}
+              onChange={(value) => this.props.update<AgentStateMember>(member.id, { no_crawl_error_message: value })}
+              placeholder="No web crawl data is available yet."
+            />
+          </>
+        )}
+        <Header style={{ marginTop: 6 }}>System message prefix (optional)</Header>
+        <Textfield
+          outline
+          multiline
+          enterToSubmit={false}
+          value={member.system_message_prefix || ''}
+          onChange={(value) => this.props.update<AgentStateMember>(member.id, { system_message_prefix: value })}
+          placeholder="Use the following webpage content to answer the question:"
+        />
+        <Header style={{ marginTop: 6 }}>LLM</Header>
+        <LlmSelect
+          value={member.llm_name || ''}
+          onChange={(e) => this.props.update<AgentStateMember>(member.id, { llm_name: e.target.value })}
+        >
+          <option value="">(use default)</option>
+          {llmNames.map((n) => <option key={n} value={n}>{n}</option>)}
+        </LlmSelect>
+      </LlmFieldRow>
     );
   };
 

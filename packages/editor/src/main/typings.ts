@@ -77,6 +77,15 @@ export interface AgentModelElement extends UMLModelElement {
   dbSqlQuery?: string;
   llm_name?: string;
   system_message?: string;
+  // web crawl + LLM fields
+  initial_url?: string;
+  max_depth?: number;
+  max_pages?: number;
+  crawl_format?: string;
+  base_url_prefix?: string;
+  run_crawl?: boolean;
+  no_crawl_error_message?: string;
+  system_message_prefix?: string;
 }
 
 export type UMLElement = UMLModelElement & {

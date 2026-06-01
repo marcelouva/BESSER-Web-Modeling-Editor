@@ -18,6 +18,14 @@ interface IAgentStateMemberValues extends IUMLElement {
   dbSqlQuery?: string;
   llm_name?: string;
   system_message?: string;
+  initial_url?: string;
+  max_depth?: number;
+  max_pages?: number;
+  crawl_format?: string;
+  base_url_prefix?: string;
+  run_crawl?: boolean;
+  no_crawl_error_message?: string;
+  system_message_prefix?: string;
 }
 
 export abstract class AgentStateMember extends UMLElement {
@@ -43,6 +51,14 @@ export abstract class AgentStateMember extends UMLElement {
   dbSqlQuery: string = '';
   llm_name: string = '';
   system_message: string = '';
+  initial_url: string = '';
+  max_depth: number = 2;
+  max_pages: number = 20;
+  crawl_format: string = 'markdown';
+  base_url_prefix: string = '';
+  run_crawl: boolean = true;
+  no_crawl_error_message: string = 'No web crawl data is available yet.';
+  system_message_prefix: string = '';
 
   constructor(values?: DeepPartial<IAgentStateMemberValues>) {
     super(values);
@@ -74,6 +90,30 @@ export abstract class AgentStateMember extends UMLElement {
     if (values?.system_message !== undefined) {
       this.system_message = values.system_message ?? '';
     }
+    if (values?.initial_url !== undefined) {
+      this.initial_url = values.initial_url ?? '';
+    }
+    if (values?.max_depth !== undefined) {
+      this.max_depth = values.max_depth ?? 2;
+    }
+    if (values?.max_pages !== undefined) {
+      this.max_pages = values.max_pages ?? 20;
+    }
+    if (values?.crawl_format !== undefined) {
+      this.crawl_format = values.crawl_format ?? 'markdown';
+    }
+    if (values?.base_url_prefix !== undefined) {
+      this.base_url_prefix = values.base_url_prefix ?? '';
+    }
+    if (values?.run_crawl !== undefined) {
+      this.run_crawl = values.run_crawl ?? true;
+    }
+    if (values?.no_crawl_error_message !== undefined) {
+      this.no_crawl_error_message = values.no_crawl_error_message ?? 'No web crawl data is available yet.';
+    }
+    if (values?.system_message_prefix !== undefined) {
+      this.system_message_prefix = values.system_message_prefix ?? '';
+    }
   }
 
 
@@ -85,6 +125,7 @@ export abstract class AgentStateMember extends UMLElement {
     rag: 'RAGReplyAction',
     db_reply: 'DBAction',
     code: 'CustomCodeAction',
+    web_crawl_llm: 'WebCrawlLLMAction',
   };
 
   // Reverse map: actionType class names → internal replyType values (for deserialization compat).
@@ -95,6 +136,7 @@ export abstract class AgentStateMember extends UMLElement {
     RAGReplyAction: 'rag',
     DBAction: 'db_reply',
     CustomCodeAction: 'code',
+    WebCrawlLLMAction: 'web_crawl_llm',
   };
 
   /** Serializes an `UMLElement` to an `Apollon.UMLElement` */
@@ -140,6 +182,17 @@ export abstract class AgentStateMember extends UMLElement {
       serialized.system_message = this.system_message;
     }
 
+    if (this.replyType === 'web_crawl_llm') {
+      serialized.initial_url = this.initial_url;
+      serialized.max_depth = this.max_depth;
+      serialized.max_pages = this.max_pages;
+      serialized.crawl_format = this.crawl_format;
+      serialized.base_url_prefix = this.base_url_prefix;
+      serialized.run_crawl = this.run_crawl;
+      serialized.no_crawl_error_message = this.no_crawl_error_message;
+      serialized.system_message_prefix = this.system_message_prefix;
+    }
+
     return serialized;
   }
 
@@ -154,6 +207,14 @@ export abstract class AgentStateMember extends UMLElement {
     dbOperation?: string;
     dbSqlQuery?: string;
     llm_name?: string;
+    initial_url?: string;
+    max_depth?: number;
+    max_pages?: number;
+    crawl_format?: string;
+    base_url_prefix?: string;
+    run_crawl?: boolean;
+    no_crawl_error_message?: string;
+    system_message_prefix?: string;
   }) {
     this.id = values.id;
     this.name = values.name;
@@ -180,6 +241,14 @@ export abstract class AgentStateMember extends UMLElement {
     this.dbSqlQuery = values.dbSqlQuery ?? '';
     this.llm_name = values.llm_name ?? '';
     this.system_message = values.system_message ?? '';
+    this.initial_url = values.initial_url ?? '';
+    this.max_depth = values.max_depth ?? 2;
+    this.max_pages = values.max_pages ?? 20;
+    this.crawl_format = values.crawl_format ?? 'markdown';
+    this.base_url_prefix = values.base_url_prefix ?? '';
+    this.run_crawl = values.run_crawl ?? true;
+    this.no_crawl_error_message = values.no_crawl_error_message ?? 'No web crawl data is available yet.';
+    this.system_message_prefix = values.system_message_prefix ?? '';
   }
 
   render(layer: ILayer): ILayoutable[] {
