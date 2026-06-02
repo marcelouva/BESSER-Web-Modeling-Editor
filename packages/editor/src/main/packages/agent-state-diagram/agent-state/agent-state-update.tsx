@@ -423,6 +423,22 @@ class StateUpdate extends Component<Props, State> {
     const stateType = element.stateType ?? 'standard';
     const fallbackEnabled = element.fallbackBodyEnabled !== false;
 
+    // ─── Quality warnings ────────────────────────────────────────────────────
+    const allBodyActions = [...bodies, ...fallbackBodies];
+    const LLM_ACTION_TYPES = new Set(['llm', 'llm_chat', 'rag', 'web_crawl_llm']);
+    const needsLlm = llmNames.length === 0 && (
+      stateType === 'reasoning' ||
+      allBodyActions.some(a =>
+        LLM_ACTION_TYPES.has(a.replyType) ||
+        (a.replyType === 'db_reply' && (a.dbQueryMode || 'llm_query') === 'llm_query'),
+      )
+    );
+    const needsPlatform = !hasWebSocketPlatform &&
+      allBodyActions.some(a => WS_REPLY_TYPES.has(a.replyType));
+    const needsChatLlm = !hasCompatibleChatLlm &&
+      allBodyActions.some(a => a.replyType === 'llm_chat');
+
+
     return (
       <div>
         {/* Name / color / delete */}
@@ -458,6 +474,28 @@ class StateUpdate extends Component<Props, State> {
             ]}
           </Dropdown>
         </Section>
+
+        {/* Quality warnings */}
+        {(needsLlm || needsPlatform || needsChatLlm) && (
+          <Section>
+            <Divider />
+            {needsLlm && (
+              <WsWarning>
+                ⚠ No LLM is defined in the diagram, but this state requires one. Add an LLM in the Agent Configuration.
+              </WsWarning>
+            )}
+            {needsChatLlm && (
+              <WsWarning>
+                ⚠ LLM Chat requires an OpenAI or Hugging Face LLM, but none are defined. Add a compatible LLM in the Agent Configuration.
+              </WsWarning>
+            )}
+            {needsPlatform && (
+              <WsWarning>
+                ⚠ This state has WebSocket reply actions, but the platform is not set to WebSocket. Change the platform in Agent Configuration.
+              </WsWarning>
+            )}
+          </Section>
+        )}
 
         {/* Reasoning config */}
         {stateType === 'reasoning' && this.renderReasoningConfig(element, llmNames)}
@@ -686,7 +724,13 @@ class StateUpdate extends Component<Props, State> {
             this.state.draggingIndex === index && this.state.draggingPrefix === prefix;
           const badgeWarning =
             (WS_REPLY_TYPES.has(action.replyType) && !hasWebSocketPlatform) ||
-            (action.replyType === 'llm_chat' && !hasCompatibleChatLlm);
+            (action.replyType === 'llm_chat' && !hasCompatibleChatLlm) ||
+            (llmNames.length === 0 && (
+              action.replyType === 'llm' ||
+              action.replyType === 'rag' ||
+              action.replyType === 'web_crawl_llm' ||
+              (action.replyType === 'db_reply' && (action.dbQueryMode || 'llm_query') === 'llm_query')
+            ));
 
           return (
             <ActionCard
@@ -831,7 +875,16 @@ class StateUpdate extends Component<Props, State> {
           />
         );
       case 'llm':
-        return this.renderLlmNameField(action, llmNames, `${fieldId}-llm`);
+        return (
+          <>
+            {llmNames.length === 0 && (
+              <WsWarning style={{ marginBottom: 6 }}>
+                No LLM defined. Add one in the Agent Configuration.
+              </WsWarning>
+            )}
+            {this.renderLlmNameField(action, llmNames, `${fieldId}-llm`)}
+          </>
+        );
       case 'llm_chat': {
         const selectedProvider = action.llm_name ? llmProviderByName[action.llm_name] : '';
         const hasIncompatibleSelection = Boolean(
@@ -853,7 +906,14 @@ class StateUpdate extends Component<Props, State> {
         );
       }
       case 'rag':
-        return ragDatabaseNames.length ? (
+        return (
+          <>
+            {llmNames.length === 0 && (
+              <WsWarning style={{ marginBottom: 6 }}>
+                No LLM defined. RAG requires an LLM. Add one in the Agent Configuration.
+              </WsWarning>
+            )}
+            {ragDatabaseNames.length ? (
           <LlmFieldRow>
             <Header>RAG database</Header>
             <Dropdown
@@ -887,6 +947,8 @@ class StateUpdate extends Component<Props, State> {
           <p style={{ fontSize: 12, margin: '4px 0', opacity: 0.7 }}>
             No RAG databases found. Create one from the palette first.
           </p>
+        )}
+          </>
         );
       case 'db_reply':
         return this.renderDbReplyEditor(action, Clazz, llmNames);
@@ -1097,7 +1159,7 @@ class StateUpdate extends Component<Props, State> {
   private renderWebSocketReplyEditor = (action: AgentStateMember, hasWebSocketPlatform: boolean): React.ReactNode => {
     const platformWarning = !hasWebSocketPlatform ? (
       <WsWarning style={{ marginBottom: 6 }}>
-        This action requires a WebSocket Platform. Add a Platform element from the palette and set its type to WebSocket.
+        This action requires a WebSocket Platform. You can change the Agent Platform in the Configuration Page.
       </WsWarning>
     ) : null;
 
@@ -1361,6 +1423,11 @@ class StateUpdate extends Component<Props, State> {
               onChange={(value) => this.updateDbReply(member, { dbSqlQuery: value })} />
           ) : (
             <>
+              {llmNames.length === 0 && (
+                <WsWarning style={{ marginBottom: 6 }}>
+                  No LLM defined. LLM query mode requires an LLM. Add one in the Agent Configuration.
+                </WsWarning>
+              )}
               <p>Answer will be generated with LLM during runtime</p>
               {this.renderLlmNameField(member, llmNames, `db-llm-${member.id}`)}
             </>
@@ -1377,6 +1444,11 @@ class StateUpdate extends Component<Props, State> {
     const crawl_format = member.crawl_format || 'markdown';
     return (
       <LlmFieldRow>
+        {llmNames.length === 0 && (
+          <WsWarning style={{ marginBottom: 6 }}>
+            No LLM defined. Web Crawl + LLM requires an LLM. Add one in the Agent Configuration.
+          </WsWarning>
+        )}
         <Header>Initial URL</Header>
         <Textfield
           outline
