@@ -86,6 +86,12 @@ export interface AgentModelElement extends UMLModelElement {
   run_crawl?: boolean;
   no_crawl_error_message?: string;
   system_message_prefix?: string;
+  // websocket-specific reply fields
+  ws_message?: string;
+  ws_audio_speed?: number | null;
+  ws_options?: string;
+  ws_latitude?: number;
+  ws_longitude?: number;
 }
 
 export type UMLElement = UMLModelElement & {

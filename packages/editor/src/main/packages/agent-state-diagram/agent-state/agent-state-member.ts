@@ -26,6 +26,11 @@ interface IAgentStateMemberValues extends IUMLElement {
   run_crawl?: boolean;
   no_crawl_error_message?: string;
   system_message_prefix?: string;
+  ws_message?: string;
+  ws_audio_speed?: number | null;
+  ws_options?: string;
+  ws_latitude?: number;
+  ws_longitude?: number;
 }
 
 export abstract class AgentStateMember extends UMLElement {
@@ -59,6 +64,11 @@ export abstract class AgentStateMember extends UMLElement {
   run_crawl: boolean = true;
   no_crawl_error_message: string = 'No web crawl data is available yet.';
   system_message_prefix: string = '';
+  ws_message: string = '';
+  ws_audio_speed: number | null = null;
+  ws_options: string = '';
+  ws_latitude: number = 0;
+  ws_longitude: number = 0;
 
   constructor(values?: DeepPartial<IAgentStateMemberValues>) {
     super(values);
@@ -114,6 +124,21 @@ export abstract class AgentStateMember extends UMLElement {
     if (values?.system_message_prefix !== undefined) {
       this.system_message_prefix = values.system_message_prefix ?? '';
     }
+    if (values?.ws_message !== undefined) {
+      this.ws_message = values.ws_message ?? '';
+    }
+    if (values?.ws_audio_speed !== undefined) {
+      this.ws_audio_speed = values.ws_audio_speed ?? null;
+    }
+    if (values?.ws_options !== undefined) {
+      this.ws_options = values.ws_options ?? '';
+    }
+    if (values?.ws_latitude !== undefined) {
+      this.ws_latitude = values.ws_latitude ?? 0;
+    }
+    if (values?.ws_longitude !== undefined) {
+      this.ws_longitude = values.ws_longitude ?? 0;
+    }
   }
 
 
@@ -126,6 +151,15 @@ export abstract class AgentStateMember extends UMLElement {
     db_reply: 'DBAction',
     code: 'CustomCodeAction',
     web_crawl_llm: 'WebCrawlLLMAction',
+    ws_markdown: 'WebSocketReplyMarkdownAction',
+    ws_html: 'WebSocketReplyHTMLAction',
+    ws_speech: 'WebSocketReplySpeechAction',
+    ws_options: 'WebSocketReplyOptionsAction',
+    ws_location: 'WebSocketReplyLocationAction',
+    ws_file: 'WebSocketReplyFileAction',
+    ws_image: 'WebSocketReplyImageAction',
+    ws_dataframe: 'WebSocketReplyDataframeAction',
+    ws_plotly: 'WebSocketReplyPlotlyAction',
   };
 
   // Reverse map: actionType class names → internal replyType values (for deserialization compat).
@@ -137,6 +171,15 @@ export abstract class AgentStateMember extends UMLElement {
     DBAction: 'db_reply',
     CustomCodeAction: 'code',
     WebCrawlLLMAction: 'web_crawl_llm',
+    WebSocketReplyMarkdownAction: 'ws_markdown',
+    WebSocketReplyHTMLAction: 'ws_html',
+    WebSocketReplySpeechAction: 'ws_speech',
+    WebSocketReplyOptionsAction: 'ws_options',
+    WebSocketReplyLocationAction: 'ws_location',
+    WebSocketReplyFileAction: 'ws_file',
+    WebSocketReplyImageAction: 'ws_image',
+    WebSocketReplyDataframeAction: 'ws_dataframe',
+    WebSocketReplyPlotlyAction: 'ws_plotly',
   };
 
   /** Serializes an `UMLElement` to an `Apollon.UMLElement` */
@@ -193,6 +236,14 @@ export abstract class AgentStateMember extends UMLElement {
       serialized.system_message_prefix = this.system_message_prefix;
     }
 
+    if (this.replyType.startsWith('ws_')) {
+      serialized.ws_message = this.ws_message;
+      serialized.ws_audio_speed = this.ws_audio_speed;
+      serialized.ws_options = this.ws_options;
+      serialized.ws_latitude = this.ws_latitude;
+      serialized.ws_longitude = this.ws_longitude;
+    }
+
     return serialized;
   }
 
@@ -215,6 +266,11 @@ export abstract class AgentStateMember extends UMLElement {
     run_crawl?: boolean;
     no_crawl_error_message?: string;
     system_message_prefix?: string;
+    ws_message?: string;
+    ws_audio_speed?: number | null;
+    ws_options?: string;
+    ws_latitude?: number;
+    ws_longitude?: number;
   }) {
     this.id = values.id;
     this.name = values.name;
@@ -249,6 +305,11 @@ export abstract class AgentStateMember extends UMLElement {
     this.run_crawl = values.run_crawl ?? true;
     this.no_crawl_error_message = values.no_crawl_error_message ?? 'No web crawl data is available yet.';
     this.system_message_prefix = values.system_message_prefix ?? '';
+    this.ws_message = values.ws_message ?? '';
+    this.ws_audio_speed = values.ws_audio_speed ?? null;
+    this.ws_options = values.ws_options ?? '';
+    this.ws_latitude = values.ws_latitude != null ? Number(values.ws_latitude) : 0;
+    this.ws_longitude = values.ws_longitude != null ? Number(values.ws_longitude) : 0;
   }
 
   render(layer: ILayer): ILayoutable[] {

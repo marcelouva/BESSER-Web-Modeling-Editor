@@ -28,6 +28,7 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/python/python';
 import { Dropdown } from '../../../components/controls/dropdown/dropdown';
 import { LayouterRepository } from '../../../services/layouter/layouter-repository';
+import { diagramBridge } from '../../../services/diagram-bridge';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -222,6 +223,62 @@ const CheckboxRow = styled.label`
   padding: 4px 0;
 `;
 
+const WsWarning = styled.p`
+  font-size: 12px;
+  margin: 4px 0;
+  color: #e04040;
+  opacity: 0.85;
+`;
+
+const NewActionLabel = styled.div`
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.55;
+  margin-top: 8px;
+  margin-bottom: 4px;
+`;
+
+const SectionTabRow = styled.div`
+  display: flex;
+  gap: 3px;
+  margin-bottom: 6px;
+`;
+
+const SectionTab = styled.button<{ active?: boolean }>`
+  flex: 1;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: 1px solid ${(props: any) => props.theme.color.gray}66;
+  background: ${(props: any) => (props.active ? props.theme.color.primary : 'transparent')};
+  color: ${(props: any) => (props.active ? '#fff' : 'inherit')};
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+  &:hover:not(:disabled) {
+    opacity: 0.85;
+  }
+`;
+
+const WS_REPLY_TYPES = new Set([
+  'ws_markdown', 'ws_html', 'ws_speech', 'ws_options', 'ws_location',
+  'ws_file', 'ws_image', 'ws_dataframe', 'ws_plotly',
+]);
+
+type ActionSection = 'simple' | 'ai' | 'data';
+
+const SECTION_ACTION_TYPES: Record<ActionSection, string[]> = {
+  simple: ['text', 'ws_markdown', 'ws_html', 'ws_speech', 'ws_options', 'ws_location', 'ws_file', 'ws_image', 'ws_dataframe', 'ws_plotly'],
+  ai: ['llm', 'llm_chat'],
+  data: ['rag', 'db_reply', 'web_crawl_llm'],
+};
+
+const ALL_ACTION_TYPES = [
+  ...SECTION_ACTION_TYPES.simple,
+  ...SECTION_ACTION_TYPES.ai,
+  ...SECTION_ACTION_TYPES.data,
+];
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface OwnProps {
@@ -254,6 +311,8 @@ interface State {
   colorOpen: boolean;
   newBodyActionType: string;
   newFallbackActionType: string;
+  newBodyActionSection: ActionSection;
+  newFallbackActionSection: ActionSection;
   expandedBodyIds: Set<string>;
   expandedFallbackIds: Set<string>;
   draggingIndex: number | null;
@@ -263,13 +322,22 @@ interface State {
 }
 
 const ACTION_TYPE_LABELS: Record<string, string> = {
-  text: 'Text Reply',
-  llm: 'LLM Reply',
+  text: 'Text',
+  llm: 'LLM',
   llm_chat: 'LLM Chat',
-  rag: 'RAG Reply',
-  db_reply: 'DB Action',
+  rag: 'RAG',
+  db_reply: 'SQL Query',
   code: 'Python Code',
   web_crawl_llm: 'Web Crawl + LLM',
+  ws_markdown: 'Markdown',
+  ws_html: 'HTML',
+  ws_speech: 'Speech',
+  ws_options: 'Options',
+  ws_location: 'Location',
+  ws_file: 'File',
+  ws_image: 'Image',
+  ws_dataframe: 'Dataframe',
+  ws_plotly: 'Plotly',
 };
 
 const enhance = compose<ComponentClass<OwnProps>>(
@@ -291,6 +359,8 @@ class StateUpdate extends Component<Props, State> {
     colorOpen: false,
     newBodyActionType: 'text',
     newFallbackActionType: 'text',
+    newBodyActionSection: 'simple',
+    newFallbackActionSection: 'simple',
     expandedBodyIds: new Set(),
     expandedFallbackIds: new Set(),
     draggingIndex: null,
@@ -348,6 +418,8 @@ class StateUpdate extends Component<Props, State> {
     }, {});
     const hasCompatibleChatLlm = llmEntries.some((entry) => this.isChatCompatibleProvider(entry.provider));
 
+    const hasWebSocketPlatform = diagramBridge.getAgentPlatform() === 'websocket';
+
     const stateType = element.stateType ?? 'standard';
     const fallbackEnabled = element.fallbackBodyEnabled !== false;
 
@@ -403,6 +475,7 @@ class StateUpdate extends Component<Props, State> {
                 llmNames,
                 llmProviderByName,
                 hasCompatibleChatLlm,
+                hasWebSocketPlatform,
                 'body',
               )}
             </Section>
@@ -430,6 +503,7 @@ class StateUpdate extends Component<Props, State> {
                      llmNames,
                      llmProviderByName,
                      hasCompatibleChatLlm,
+                     hasWebSocketPlatform,
                      'fallback',
                    )}
                 </>
@@ -502,6 +576,7 @@ class StateUpdate extends Component<Props, State> {
     llmNames: string[],
     llmProviderByName: Record<string, string>,
     hasCompatibleChatLlm: boolean,
+    hasWebSocketPlatform: boolean,
     prefix: 'body' | 'fallback',
   ) => {
     const isCustom = actions.some((a) => a.replyType === 'code');
@@ -537,6 +612,7 @@ class StateUpdate extends Component<Props, State> {
             llmNames,
             llmProviderByName,
             hasCompatibleChatLlm,
+            hasWebSocketPlatform,
             prefix,
           )}
       </>
@@ -576,19 +652,29 @@ class StateUpdate extends Component<Props, State> {
     llmNames: string[],
     llmProviderByName: Record<string, string>,
     hasCompatibleChatLlm: boolean,
+    hasWebSocketPlatform: boolean,
     prefix: 'body' | 'fallback',
   ) => {
+    const section: ActionSection = prefix === 'body' ? this.state.newBodyActionSection : this.state.newFallbackActionSection;
+    const setSection = (s: ActionSection) => {
+      const firstOfSection = SECTION_ACTION_TYPES[s][0];
+      if (prefix === 'body') this.setState({ newBodyActionSection: s, newBodyActionType: firstOfSection });
+      else this.setState({ newFallbackActionSection: s, newFallbackActionType: firstOfSection });
+    };
+
+    const sectionTypes = SECTION_ACTION_TYPES[section];
     const newActionType = prefix === 'body' ? this.state.newBodyActionType : this.state.newFallbackActionType;
-    const availableActionTypes = hasCompatibleChatLlm
-      ? ['text', 'llm', 'llm_chat', 'rag', 'db_reply', 'web_crawl_llm']
-      : ['text', 'llm', 'rag', 'db_reply', 'web_crawl_llm'];
-    const selectedActionType = availableActionTypes.includes(newActionType) ? newActionType : 'text';
+    const selectedActionType = sectionTypes.includes(newActionType) ? newActionType : sectionTypes[0];
     const setNewActionType = (v: string) =>
       prefix === 'body'
         ? this.setState({ newBodyActionType: v })
         : this.setState({ newFallbackActionType: v });
 
     const expandedIds = prefix === 'body' ? this.state.expandedBodyIds : this.state.expandedFallbackIds;
+    const wsTooltip = 'Requires WebSocketPlatform. Shown in red as a reminder — add it to dismiss.';
+    const chatTooltip = 'Requires an OpenAI or Hugging Face LLM. Shown in red as a reminder.';
+    const wsColor = hasWebSocketPlatform ? undefined : '#e04040';
+    const chatColor = hasCompatibleChatLlm ? undefined : '#e04040';
 
     return (
       <>
@@ -598,6 +684,9 @@ class StateUpdate extends Component<Props, State> {
             this.state.dragOverIndex === index && this.state.dragOverPrefix === prefix;
           const isDragging =
             this.state.draggingIndex === index && this.state.draggingPrefix === prefix;
+          const badgeWarning =
+            (WS_REPLY_TYPES.has(action.replyType) && !hasWebSocketPlatform) ||
+            (action.replyType === 'llm_chat' && !hasCompatibleChatLlm);
 
           return (
             <ActionCard
@@ -634,7 +723,9 @@ class StateUpdate extends Component<Props, State> {
             >
               <ActionCardHeader>
                 <DragHandle title="Drag to reorder">⠿</DragHandle>
-                <ActionTypeBadge>{ACTION_TYPE_LABELS[action.replyType] ?? action.replyType}</ActionTypeBadge>
+                <ActionTypeBadge style={badgeWarning ? { color: '#e04040' } : undefined}>
+                  {ACTION_TYPE_LABELS[action.replyType] ?? action.replyType}
+                </ActionTypeBadge>
                 <ActionSummary title={action.name}>{this.getActionSummary(action)}</ActionSummary>
                 <IconBtn title={isExpanded ? 'Collapse' : 'Expand'} onClick={() => this.toggleExpand(action.id, prefix)}>
                   {isExpanded ? '▲' : '✎'}
@@ -652,6 +743,8 @@ class StateUpdate extends Component<Props, State> {
                     llmNames,
                     llmProviderByName,
                     `${prefix}-${index}`,
+                    hasWebSocketPlatform,
+                    hasCompatibleChatLlm,
                   )}
                 </ActionBody>
               )}
@@ -659,25 +752,48 @@ class StateUpdate extends Component<Props, State> {
           );
         })}
 
+        <NewActionLabel>New action</NewActionLabel>
+        <SectionTabRow>
+          <SectionTab active={section === 'simple'} onClick={() => setSection('simple')}>Simple Replies</SectionTab>
+          <SectionTab active={section === 'ai'} onClick={() => setSection('ai')}>AI Replies</SectionTab>
+          <SectionTab active={section === 'data'} onClick={() => setSection('data')}>Data Query</SectionTab>
+        </SectionTabRow>
         <AddActionRow>
-          <Dropdown value={selectedActionType} onChange={setNewActionType}>
-            {[
-              <Dropdown.Item key="text" value="text">Text Reply</Dropdown.Item>,
-              <Dropdown.Item key="llm" value="llm">LLM Reply</Dropdown.Item>,
-              ...(hasCompatibleChatLlm
-                ? [<Dropdown.Item key="llm_chat" value="llm_chat">LLM Chat</Dropdown.Item>]
-                : []),
-              <Dropdown.Item key="rag" value="rag">RAG Reply</Dropdown.Item>,
-              <Dropdown.Item key="db_reply" value="db_reply">DB Action</Dropdown.Item>,
-              <Dropdown.Item key="web_crawl_llm" value="web_crawl_llm">Web Crawl + LLM</Dropdown.Item>,
-            ]}
-          </Dropdown>
+          <LlmSelect
+            value={selectedActionType}
+            onChange={(e) => setNewActionType(e.target.value)}
+            style={WS_REPLY_TYPES.has(selectedActionType) ? { color: wsColor } : selectedActionType === 'llm_chat' ? { color: chatColor } : undefined}
+          >
+            {section === 'simple' && (
+              <>
+                <option value="text">Text</option>
+                <option value="ws_markdown" title={wsTooltip} style={{ color: wsColor }}>Markdown</option>
+                <option value="ws_html" title={wsTooltip} style={{ color: wsColor }}>HTML</option>
+                <option value="ws_speech" title={wsTooltip} style={{ color: wsColor }}>Speech</option>
+                <option value="ws_options" title={wsTooltip} style={{ color: wsColor }}>Options</option>
+                <option value="ws_location" title={wsTooltip} style={{ color: wsColor }}>Location</option>
+                <option value="ws_file" title={wsTooltip} style={{ color: wsColor }}>File</option>
+                <option value="ws_image" title={wsTooltip} style={{ color: wsColor }}>Image</option>
+                <option value="ws_dataframe" title={wsTooltip} style={{ color: wsColor }}>Dataframe</option>
+                <option value="ws_plotly" title={wsTooltip} style={{ color: wsColor }}>Plotly</option>
+              </>
+            )}
+            {section === 'ai' && (
+              <>
+                <option value="llm">LLM</option>
+                <option value="llm_chat" title={chatTooltip} style={{ color: chatColor }}>LLM Chat</option>
+              </>
+            )}
+            {section === 'data' && (
+              <>
+                <option value="rag">RAG</option>
+                <option value="db_reply">SQL Query</option>
+                <option value="web_crawl_llm">Web Crawl + LLM</option>
+              </>
+            )}
+          </LlmSelect>
           <Button color="primary" onClick={() => {
-            if (selectedActionType === 'llm_chat' && !hasCompatibleChatLlm) {
-              return;
-            }
             const id = this.addPredefinedAction(Clazz, selectedActionType);
-            // Auto-expand newly added action
             if (id) {
               const key = prefix === 'body' ? 'expandedBodyIds' : 'expandedFallbackIds';
               const next = new Set(this.state[key]);
@@ -688,11 +804,6 @@ class StateUpdate extends Component<Props, State> {
             Add
           </Button>
         </AddActionRow>
-        {!hasCompatibleChatLlm && (
-          <p style={{ fontSize: 12, margin: '4px 0', opacity: 0.7 }}>
-            LLM Chat is available when at least one Agent LLM uses OpenAI or Hugging Face.
-          </p>
-        )}
       </>
     );
   };
@@ -706,6 +817,8 @@ class StateUpdate extends Component<Props, State> {
     llmNames: string[],
     llmProviderByName: Record<string, string>,
     fieldId: string,
+    hasWebSocketPlatform: boolean,
+    hasCompatibleChatLlm: boolean,
   ): React.ReactNode => {
     switch (action.replyType) {
       case 'text':
@@ -724,11 +837,20 @@ class StateUpdate extends Component<Props, State> {
         const hasIncompatibleSelection = Boolean(
           action.llm_name && selectedProvider && !this.isChatCompatibleProvider(selectedProvider),
         );
-        return this.renderLlmNameField(action, llmNames, `${fieldId}-llm-chat`, {
-          warning: hasIncompatibleSelection
-            ? 'Selected LLM provider is incompatible with chat(). Use OpenAI or Hugging Face.'
-            : undefined,
-        });
+        return (
+          <>
+            {!hasCompatibleChatLlm && (
+              <WsWarning style={{ marginBottom: 6 }}>
+                LLM Chat requires an OpenAI or Hugging Face LLM. Add one from the palette and set its provider accordingly.
+              </WsWarning>
+            )}
+            {this.renderLlmNameField(action, llmNames, `${fieldId}-llm-chat`, {
+              warning: hasIncompatibleSelection
+                ? 'Selected LLM provider is incompatible with chat(). Use OpenAI or Hugging Face.'
+                : undefined,
+            })}
+          </>
+        );
       }
       case 'rag':
         return ragDatabaseNames.length ? (
@@ -770,6 +892,16 @@ class StateUpdate extends Component<Props, State> {
         return this.renderDbReplyEditor(action, Clazz, llmNames);
       case 'web_crawl_llm':
         return this.renderWebCrawlLlmEditor(action, llmNames);
+      case 'ws_markdown':
+      case 'ws_html':
+      case 'ws_speech':
+      case 'ws_options':
+      case 'ws_location':
+      case 'ws_file':
+      case 'ws_image':
+      case 'ws_dataframe':
+      case 'ws_plotly':
+        return this.renderWebSocketReplyEditor(action, hasWebSocketPlatform);
       default:
         return null;
     }
@@ -793,6 +925,25 @@ class StateUpdate extends Component<Props, State> {
         return action.initial_url
           ? `Crawl: ${truncate(action.initial_url, 30)}${action.run_crawl ? '' : ' (no crawl)'}`
           : '(set URL)';
+      case 'ws_markdown':
+      case 'ws_html':
+        return action.ws_message ? truncate(action.ws_message) : '(no message)';
+      case 'ws_speech':
+        return action.ws_message ? truncate(action.ws_message) : '(no message)';
+      case 'ws_options': {
+        const opts = (action.ws_options || '').split('\n').filter(Boolean);
+        return opts.length ? `${opts.length} option(s)` : '(no options)';
+      }
+      case 'ws_location':
+        return `(${action.ws_latitude ?? 0}, ${action.ws_longitude ?? 0})`;
+      case 'ws_file':
+        return '(placeholder: file)';
+      case 'ws_image':
+        return '(placeholder: image)';
+      case 'ws_dataframe':
+        return '(placeholder: dataframe)';
+      case 'ws_plotly':
+        return '(placeholder: plot)';
       default:
         return truncate(name);
     }
@@ -854,6 +1005,40 @@ class StateUpdate extends Component<Props, State> {
         member.system_message_prefix = '';
         member.name = 'Web Crawl + LLM (set URL)';
         break;
+      case 'ws_markdown':
+        member.ws_message = '';
+        member.name = 'Markdown (empty)';
+        break;
+      case 'ws_html':
+        member.ws_message = '';
+        member.name = 'HTML (empty)';
+        break;
+      case 'ws_speech':
+        member.ws_message = '';
+        member.ws_audio_speed = null;
+        member.name = 'Speech (empty)';
+        break;
+      case 'ws_options':
+        member.ws_options = '';
+        member.name = 'Options (no options)';
+        break;
+      case 'ws_location':
+        member.ws_latitude = 0;
+        member.ws_longitude = 0;
+        member.name = 'Location (0, 0)';
+        break;
+      case 'ws_file':
+        member.name = 'File (placeholder)';
+        break;
+      case 'ws_image':
+        member.name = 'Image (placeholder)';
+        break;
+      case 'ws_dataframe':
+        member.name = 'Dataframe (placeholder)';
+        break;
+      case 'ws_plotly':
+        member.name = 'Plotly (placeholder)';
+        break;
       default:
         member.name = replyType;
     }
@@ -897,9 +1082,160 @@ class StateUpdate extends Component<Props, State> {
       run_crawl: m.run_crawl,
       no_crawl_error_message: m.no_crawl_error_message,
       system_message_prefix: m.system_message_prefix,
+      ws_message: m.ws_message,
+      ws_audio_speed: m.ws_audio_speed,
+      ws_options: m.ws_options,
+      ws_latitude: m.ws_latitude,
+      ws_longitude: m.ws_longitude,
     });
     this.props.update<AgentStateMember>(a.id, fieldsOf(b));
     this.props.update<AgentStateMember>(b.id, fieldsOf(a));
+  };
+
+  // ─── WebSocket reply editor ───────────────────────────────────────────────────
+
+  private renderWebSocketReplyEditor = (action: AgentStateMember, hasWebSocketPlatform: boolean): React.ReactNode => {
+    const platformWarning = !hasWebSocketPlatform ? (
+      <WsWarning style={{ marginBottom: 6 }}>
+        This action requires a WebSocket Platform. Add a Platform element from the palette and set its type to WebSocket.
+      </WsWarning>
+    ) : null;
+
+    let content: React.ReactNode = null;
+    switch (action.replyType) {
+      case 'ws_markdown':
+      case 'ws_html':
+        content = (
+          <LlmFieldRow>
+            <Header>Message</Header>
+            <Textfield
+              outline
+              multiline
+              enterToSubmit={false}
+              value={action.ws_message || ''}
+              onChange={(v) => this.props.update<AgentStateMember>(action.id, {
+                ws_message: v,
+                name: v ? v.slice(0, 40) : `${ACTION_TYPE_LABELS[action.replyType]} (empty)`,
+              })}
+              placeholder={action.replyType === 'ws_markdown' ? '**Bold**, *italic*, etc.' : '<p>HTML content</p>'}
+            />
+          </LlmFieldRow>
+        );
+        break;
+      case 'ws_speech':
+        content = (
+          <LlmFieldRow>
+            <Header>Message (text to speech)</Header>
+            <Textfield
+              outline
+              multiline
+              enterToSubmit={false}
+              value={action.ws_message || ''}
+              onChange={(v) => this.props.update<AgentStateMember>(action.id, { ws_message: v })}
+              placeholder="Text to convert to speech"
+            />
+            <Header style={{ marginTop: 6 }}>Audio speed (optional)</Header>
+            <Textfield
+              outline
+              value={action.ws_audio_speed ?? ''}
+              onChange={(v) => {
+                const parsed = parseFloat(String(v));
+                this.props.update<AgentStateMember>(action.id, {
+                  ws_audio_speed: String(v) === '' || isNaN(parsed) ? null : parsed,
+                });
+              }}
+              placeholder="1.0 (default)"
+            />
+          </LlmFieldRow>
+        );
+        break;
+      case 'ws_options':
+        content = (
+          <LlmFieldRow>
+            <Header>Options (one per line)</Header>
+            <Textfield
+              outline
+              multiline
+              enterToSubmit={false}
+              value={action.ws_options || ''}
+              onChange={(v) => {
+                const count = v.split('\n').filter(Boolean).length;
+                this.props.update<AgentStateMember>(action.id, {
+                  ws_options: v,
+                  name: count > 0 ? `Options: ${count} item(s)` : 'Options (no options)',
+                });
+              }}
+              placeholder={'Yes\nNo\nMaybe'}
+            />
+          </LlmFieldRow>
+        );
+        break;
+      case 'ws_location':
+        content = (
+          <LlmFieldRow>
+            <DbFieldRow>
+              <label>Latitude</label>
+              <Textfield
+                outline
+                value={String(action.ws_latitude ?? 0)}
+                onChange={(v) => {
+                  const p = parseFloat(String(v).replace(',', '.'));
+                  if (!isNaN(p)) this.props.update<AgentStateMember>(action.id, { ws_latitude: p });
+                }}
+                placeholder="e.g. 48.8566"
+              />
+            </DbFieldRow>
+            <DbFieldRow>
+              <label>Longitude</label>
+              <Textfield
+                outline
+                value={String(action.ws_longitude ?? 0)}
+                onChange={(v) => {
+                  const p = parseFloat(String(v).replace(',', '.'));
+                  if (!isNaN(p)) this.props.update<AgentStateMember>(action.id, { ws_longitude: p });
+                }}
+                placeholder="e.g. 2.3522"
+              />
+            </DbFieldRow>
+          </LlmFieldRow>
+        );
+        break;
+      case 'ws_file':
+        content = (
+          <WsWarning>
+            The generated code contains a placeholder. You must assign a <code>baf.types.File</code> object
+            to <code>reply_file_obj</code> before this state is reached.
+          </WsWarning>
+        );
+        break;
+      case 'ws_image':
+        content = (
+          <WsWarning>
+            The generated code contains a placeholder. You must assign a <code>numpy.ndarray</code> image
+            to <code>reply_image_arr</code> before this state is reached.
+          </WsWarning>
+        );
+        break;
+      case 'ws_dataframe':
+        content = (
+          <WsWarning>
+            The generated code contains a placeholder. You must assign a <code>pandas.DataFrame</code>
+            to <code>reply_df</code> before this state is reached.
+          </WsWarning>
+        );
+        break;
+      case 'ws_plotly':
+        content = (
+          <WsWarning>
+            The generated code contains a placeholder. You must assign a <code>plotly.graph_objs.Figure</code>
+            to <code>reply_plot</code> before this state is reached.
+          </WsWarning>
+        );
+        break;
+      default:
+        break;
+    }
+    return <>{platformWarning}{content}</>;
   };
 
   // ─── Helper renderers ─────────────────────────────────────────────────────────
