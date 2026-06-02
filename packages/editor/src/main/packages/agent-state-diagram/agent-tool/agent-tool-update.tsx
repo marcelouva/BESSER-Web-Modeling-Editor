@@ -1,6 +1,10 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import styled from 'styled-components';
+import { Controlled as CodeMirror } from 'react-codemirror2';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/material.css';
+import 'codemirror/mode/python/python';
 import { Textfield } from '../../../components/controls/textfield/textfield';
 import { Header } from '../../../components/controls/typography/typography';
 import { ModelState } from '../../../components/store/model-state';
@@ -10,6 +14,21 @@ import { AgentTool } from './agent-tool';
 
 const Section = styled.section`
   padding: 8px 0;
+`;
+
+const ResizableCodeMirrorWrapper = styled.div`
+  resize: both;
+  overflow: auto;
+  min-height: 150px;
+  border: 1px solid ${(props: any) => props.theme.color.gray};
+  border-radius: 4px;
+  padding: 8px;
+  box-sizing: border-box;
+
+  .CodeMirror {
+    height: 100% !important;
+    width: 100%;
+  }
 `;
 
 const Warning = styled.p`
@@ -63,13 +82,14 @@ const AgentToolUpdateComponent: React.FC<Props> = ({ element, update, elements }
       </Section>
       <Section>
         <Header>Python code</Header>
-        <Textfield
-          value={element.code}
-          multiline
-          enterToSubmit={false}
-          placeholder={'def tool_name(...):\n    ...'}
-          onChange={(code) => update<AgentTool>(element.id, { code })}
-        />
+        <ResizableCodeMirrorWrapper>
+          <CodeMirror
+            value={element.code || ''}
+            options={{ mode: 'python', theme: 'material', lineNumbers: true, tabSize: 4, indentWithTabs: true }}
+            onBeforeChange={(_e, _d, value) => update<AgentTool>(element.id, { code: value })}
+            onChange={() => {}}
+          />
+        </ResizableCodeMirrorWrapper>
       </Section>
     </div>
   );

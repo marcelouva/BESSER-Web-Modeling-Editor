@@ -24,7 +24,7 @@ export class AgentTool extends UMLElement implements IAgentTool {
 
   type: UMLElementType = AgentElementType.AgentTool;
   description: string = '';
-  code: string = '';
+  code: string = 'def tool_name():\n    pass\n';
 
   bounds: IBoundary = {
     ...this.bounds,
@@ -55,7 +55,7 @@ export class AgentTool extends UMLElement implements IAgentTool {
   ): void {
     super.deserialize(values, children);
     this.description = values.description || '';
-    this.code = values.code || '';
+    this.code = values.code || 'def tool_name():\n    pass\n';
   }
 
   render(layer: ILayer): ILayoutable[] {
