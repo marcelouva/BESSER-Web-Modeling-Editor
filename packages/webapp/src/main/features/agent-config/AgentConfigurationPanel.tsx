@@ -44,13 +44,7 @@ import {
   removeConfigurationVariantsFromProject,
   upsertVariantForProfile,
 } from '../../shared/services/agent-variants/agent-variants-service';
-// @ts-ignore - codemirror v5 has no bundled TypeScript declarations
-import CodeMirrorLib from 'codemirror';
-import 'codemirror/lib/codemirror.css';
-// @ts-ignore
-import 'codemirror/mode/yaml/yaml';
-// @ts-ignore - js-yaml v4 has no bundled TypeScript declarations
-import * as jsyaml from 'js-yaml';
+import { AgentConfigYamlEditor } from './AgentConfigYamlEditor';
 
 type AgentTransformationConfig = Partial<AgentConfigurationPayload> & { userProfileModel?: UMLModel };
 
@@ -585,82 +579,6 @@ const resolveProfileNameFromMapping = (
     : '';
 };
 
-const DEFAULT_CONFIG_YAML = `agent:
-  check_transitions_delay: 5
-
-nlp:
-  language: en
-  region: US
-  timezone: Europe/Madrid
-  pre_processing: True
-  intent_threshold: 0.4
-  huggingface:
-    token: YOUR-TOKEN
-  openai:
-    api_key: YOUR-API-KEY
-  replicate:
-    api_key: YOUR-API-KEY
-
-platforms:
-  websocket:
-    host: localhost
-    port: 8765
-    streamlit:
-      host: localhost
-      port: 5000
-      chat:
-        size: 16
-        font: sans
-        line_spacing: 1.5
-        alignment: left
-        color: inherit
-        contrast: medium
-  telegram:
-    token: YOUR-BOT-TOKEN
-  github:
-    personal_token: YOUR-PERSONAL-TOKEN
-    webhook_token: YOUR-WEBHOOK-TOKEN
-    webhook_port: 8901
-  gitlab:
-    personal_token: YOUR-PERSONAL-TOKEN
-    webhook_token: YOUR-WEBHOOK-TOKEN
-    webhook_port: 8901
-  a2a:
-    port: 8000
-
-db:
-  monitoring:
-    enabled: True
-    dialect: postgresql
-    host: YOUR-DB-HOST
-    port: 5432
-    database: YOUR-DB-NAME
-    username: YOUR-DB-USERNAME
-    password: YOUR-DB-PASSWORD
-  streamlit:
-    enabled: True
-    dialect: postgresql
-    host: YOUR-DB-HOST
-    port: 5432
-    database: YOUR-DB-NAME
-    username: YOUR-DB-USERNAME
-    password: YOUR-DB-PASSWORD
-  sql:
-    - db1:
-        dialect: postgresql
-        host: YOUR-DB-HOST
-        port: 5432
-        database: YOUR-DB-NAME
-        username: YOUR-DB-USERNAME
-        password: YOUR-DB-PASSWORD
-    - db2:
-        dialect: postgresql
-        host: YOUR-DB-HOST
-        port: 5432
-        database: YOUR-DB-NAME
-        username: YOUR-DB-USERNAME
-        password: YOUR-DB-PASSWORD
-`;
 
 const loadInitialState = () => {
   const savedConfigurations = LocalStorageRepository.getAgentConfigurations();
@@ -1042,74 +960,6 @@ export const AgentConfigurationPanel: React.FC = () => {
     [persistDefaultLlmName],
   );
 
-  // configYaml — top-level field on the agent diagram (not inside `config`)
-  const configYamlInitial = useMemo<string>(() => {
-    const activeAgent = currentProject ? getActiveDiagram(currentProject, 'AgentDiagram') : null;
-    return typeof activeAgent?.configYaml === 'string' ? activeAgent.configYaml : DEFAULT_CONFIG_YAML;
-  }, [currentProject]);
-
-  const [configYaml, setConfigYaml] = useState<string>(configYamlInitial);
-
-  useEffect(() => {
-    setConfigYaml(configYamlInitial);
-  }, [configYamlInitial]);
-
-  const persistConfigYaml = useCallback(
-    (next: string) => {
-      if (!currentProject) return;
-      const latestProject = ProjectStorageRepository.loadProject(currentProject.id) || currentProject;
-      const latestAgentDiagram = getActiveDiagram(latestProject, 'AgentDiagram');
-      if (!latestAgentDiagram) return;
-      ProjectStorageRepository.updateDiagram(currentProject.id, 'AgentDiagram', {
-        ...latestAgentDiagram,
-        configYaml: next,
-      });
-    },
-    [currentProject],
-  );
-
-  const [yamlError, setYamlError] = useState<string | null>(null);
-  const cmContainerRef = useRef<HTMLDivElement>(null);
-  const cmInstanceRef = useRef<any>(null);
-  const persistConfigYamlRef = useRef(persistConfigYaml);
-  useEffect(() => { persistConfigYamlRef.current = persistConfigYaml; }, [persistConfigYaml]);
-
-  useEffect(() => {
-    if (!cmContainerRef.current || cmInstanceRef.current) return;
-    const cm = (CodeMirrorLib as any)(cmContainerRef.current, {
-      value: configYamlInitial,
-      mode: 'yaml',
-      lineNumbers: true,
-      lineWrapping: true,
-      tabSize: 2,
-      indentWithTabs: false,
-    });
-    cm.on('change', (instance: any) => {
-      const next = instance.getValue();
-      setConfigYaml(next);
-      persistConfigYamlRef.current(next);
-      try {
-        (jsyaml as any).load(next);
-        setYamlError(null);
-      } catch (e: any) {
-        setYamlError(e.message ?? String(e));
-      }
-    });
-    cmInstanceRef.current = cm;
-    return () => {
-      if (cmInstanceRef.current) {
-        cmInstanceRef.current.getWrapperElement().remove();
-        cmInstanceRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (cmInstanceRef.current && cmInstanceRef.current.getValue() !== configYaml) {
-      cmInstanceRef.current.setValue(configYaml);
-    }
-  }, [configYaml]);
 
   // Resolve the default LLM that satisfies the invariant
   // "if the list has any LLMs, the default points to one of them; if there
@@ -2495,15 +2345,7 @@ export const AgentConfigurationPanel: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {yamlError && (
-                <div className="mb-3 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  <span className="font-semibold">YAML syntax error:</span> {yamlError}
-                </div>
-              )}
-              <div
-                ref={cmContainerRef}
-                className="overflow-hidden rounded-md border border-input [&_.CodeMirror]:min-h-[400px] [&_.CodeMirror]:font-mono [&_.CodeMirror]:text-sm"
-              />
+              <AgentConfigYamlEditor currentProject={currentProject} />
             </CardContent>
           </Card>
           </>
