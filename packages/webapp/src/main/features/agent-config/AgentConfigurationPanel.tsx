@@ -1812,6 +1812,10 @@ export const AgentConfigurationPanel: React.FC = () => {
       ? LocalStorageRepository.getAgentBaseModel(currentAgentDiagram.id)
       : null;
 
+    // Re-personalize from the stored un-personalized base when one exists,
+    // otherwise the live diagram is itself the base. The stored snapshot is
+    // guaranteed to be in the canonical nested transition shape (normalized at
+    // the storage boundary), so it round-trips through the backend cleanly.
     const agentModel = storedBaseModel
       ? cloneModel(storedBaseModel)
       : currentAgentModel
