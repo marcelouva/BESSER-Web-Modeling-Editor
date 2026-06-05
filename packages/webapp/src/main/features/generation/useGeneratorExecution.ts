@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ApollonEditor, UMLDiagramType } from '@besser/wme';
+import { ApollonEditor, UMLDiagramType, UMLModel } from '@besser/wme';
 import { toast } from 'react-toastify';
 
 import { useAppDispatch } from '../../app/store/hooks';
@@ -616,7 +616,7 @@ export function useGeneratorExecution(editor: ApollonEditor | undefined): UseGen
     async (
       generatorType: GeneratorType,
       config?: unknown,
-      options?: { autoGenerateGuiIfEmpty?: boolean },
+      options?: { autoGenerateGuiIfEmpty?: boolean; agentModelOverride?: UMLModel },
     ): Promise<GenerationResult> => {
       if (!currentProject) {
         toast.error('Create or load a project before generating code.');
@@ -735,7 +735,14 @@ export function useGeneratorExecution(editor: ApollonEditor | undefined): UseGen
             result = await generateCode(editor, 'jsonschema', activeDiagramTitle, config as JSONSchemaConfig);
             break;
           case 'agent':
-            result = await generateCode(editor, 'agent', activeDiagramTitle, config as AgentConfig);
+            result = await generateCode(
+              editor,
+              'agent',
+              activeDiagramTitle,
+              config as AgentConfig,
+              undefined,
+              options?.agentModelOverride,
+            );
             break;
           case 'jsonobject': {
             if (!isObjectContext && !isUserContext) {
@@ -967,6 +974,7 @@ export function useGeneratorExecution(editor: ApollonEditor | undefined): UseGen
     }
 
     let finalConfig: AgentConfig = baseConfig;
+    let agentModelOverride: UMLModel | undefined;
 
     if (agentGenerationMode === 'personalization') {
       const localProfiles = LocalStorageRepository.getUserProfiles();
@@ -1024,10 +1032,36 @@ export function useGeneratorExecution(editor: ApollonEditor | undefined): UseGen
         ...baseConfig,
         personalizationMapping,
       };
+
+      // Personalization codegen rebuilds every variant on top of the model the
+      // backend receives. Send the un-personalized base from localStorage so
+      // generation is deterministic — without this, whichever variant is
+      // active in the editor would silently become the new "base" each variant
+      // is layered onto.
+      const baseAgentDiagramId = activeAgentDiagram?.id;
+      const storedBase = baseAgentDiagramId
+        ? LocalStorageRepository.getAgentBaseModel(baseAgentDiagramId)
+        : null;
+      if (storedBase && isUMLModel(storedBase) && storedBase.type === UMLDiagramType.AgentDiagram) {
+        agentModelOverride = storedBase;
+      } else {
+        // No stored base resolved — generation falls back to the active editor
+        // model, which may be a personalized variant rather than the
+        // un-personalized base. Surface it instead of silently shipping the
+        // wrong base.
+        console.warn(
+          '[generation] Personalization mode could not resolve a stored agent base model; ' +
+            'falling back to the active diagram. Save & Apply at least once to capture the base.',
+        );
+      }
     }
 
     const shouldSendConfig = Object.keys(finalConfig).length > 0;
-    await executeGenerator('agent', shouldSendConfig ? finalConfig : undefined);
+    await executeGenerator(
+      'agent',
+      shouldSendConfig ? finalConfig : undefined,
+      agentModelOverride ? { agentModelOverride } : undefined,
+    );
     setConfigDialog('none');
   }, [
     currentProject,

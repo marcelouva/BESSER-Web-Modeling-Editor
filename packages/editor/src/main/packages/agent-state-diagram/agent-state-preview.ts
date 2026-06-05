@@ -31,7 +31,7 @@ export const composeBotPreview: ComposePreview = (
   translate: (id: string) => string,
 ): UMLElement[] => {
   // Build every preview element first, then push in the palette's display
-  // order below (flow/states → capabilities → knowledge).
+  // order below (flow/states → knowledge → capabilities).
 
   // State Initial Node
   const stateInitialNode = new UMLStateInitialNode({
@@ -106,21 +106,21 @@ export const composeBotPreview: ComposePreview = (
   ragElement.render(layer);
 
   // Display order, grouped into titled sections (mirrors the NN palette):
-  // Flow → Capabilities → Knowledge.
+  // Flow → Knowledge → Capabilities.
   const elements: UMLElement[] = [
     sectionTitle('Flow'),
     stateInitialNode,
     emptyAgentState,
     ...agentStateRendered,
     sectionSeparator(),
+    sectionTitle('Knowledge'),
+    emptyIntent,
+    ragElement,
+    sectionSeparator(),
     sectionTitle('Capabilities'),
     toolElement,
     skillElement,
     workspaceElement,
-    sectionSeparator(),
-    sectionTitle('Knowledge'),
-    emptyIntent,
-    ragElement,
   ];
 
   return elements;
