@@ -10,6 +10,11 @@ import { IBoundary } from '../../../utils/geometry/boundary';
 import { Text } from '../../../utils/svg/text';
 import { UMLElementType } from '../../uml-element-type';
 
+const AGENT_RAG_MIN_WIDTH = 100;
+const AGENT_RAG_DEFAULT_WIDTH = 140;
+const AGENT_RAG_MAX_AUTO_WIDTH = 340;
+const AGENT_RAG_MIN_HEIGHT = 70;
+
 export interface IAgentRagElement extends IUMLElement {
   llm_name: string;
   llm_prompt: string;
@@ -91,9 +96,15 @@ export class AgentRagElement extends UMLElement implements IAgentRagElement {
   }
 
   render(layer: ILayer): ILayoutable[] {
-    const minWidth = Math.max(120, Text.size(layer, this.name, { fontWeight: 'normal' }).width + 40);
-    this.bounds.width = Math.max(this.bounds.width, minWidth);
-    this.bounds.height = Math.max(this.bounds.height, 110);
+    if (!this.isManuallyLayouted) {
+      const nameWidth = Text.size(layer, this.name, { fontWeight: 'normal' }).width + 40;
+      const autoWidth = Math.max(AGENT_RAG_DEFAULT_WIDTH, nameWidth);
+      this.bounds.width = Math.max(AGENT_RAG_MIN_WIDTH, Math.min(AGENT_RAG_MAX_AUTO_WIDTH, autoWidth));
+      this.bounds.height = Math.max(this.bounds.height, 110);
+    } else {
+      this.bounds.width = Math.max(this.bounds.width, AGENT_RAG_MIN_WIDTH);
+      this.bounds.height = Math.max(this.bounds.height, AGENT_RAG_MIN_HEIGHT);
+    }
     return [this];
   }
 }
