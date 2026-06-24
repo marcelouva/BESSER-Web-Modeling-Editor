@@ -13,10 +13,7 @@ import { Patch, Patcher, PatcherRepository } from './services/patcher';
 import { ApollonMode, ApollonView, Locale } from './services/editor/editor-types';
 import { UMLDiagram } from './services/uml-diagram/uml-diagram';
 import { UMLElementRepository } from './services/uml-element/uml-element-repository';
-import { computeElkLayout, LayoutEdge, LayoutNode } from './services/layouter/elk-layouter';
-import { LayouterRepository } from './services/layouter/layouter-repository';
-import { MoveAction, MovingActionTypes } from './services/uml-element/movable/moving-types';
-import { IUMLRelationship } from './services/uml-relationship/uml-relationship';
+import { AutoLayoutRepository } from './services/layouter/auto-layout-repository';
 import * as Apollon from './typings';
 import { UMLDiagramType, UMLModel } from './typings';
 import { Dispatch } from './utils/actions/actions';
@@ -408,55 +405,12 @@ export class ApollonEditor {
   /**
    * Auto-arranges the current class diagram using ELK's layered layout, then
    * re-routes relationships and reflows class members. Class diagrams only;
-   * other diagram types are a no-op. Positions are computed by the
-   * framework-agnostic `computeElkLayout` (see services/layouter/elk-layouter),
-   * so the same layout logic carries over to a future React Flow editor.
+   * other diagram types are a no-op. The work runs in the auto-layout saga
+   * (services/layouter/auto-layout-saga), shared with the in-canvas button.
    */
-  async autoLayout(): Promise<void> {
+  autoLayout(): void {
     this.ensureInitialized();
-    const { elements, diagram } = this.store!.getState();
-
-    if (diagram.type !== UMLDiagramType.ClassDiagram) {
-      // tslint:disable-next-line:no-console
-      console.warn(`autoLayout: only ClassDiagram is supported (got "${diagram.type}").`);
-      return;
-    }
-
-    const nodes: LayoutNode[] = diagram.ownedElements
-      .map((id) => elements[id])
-      .filter((element) => Boolean(element))
-      .map((element) => ({ id: element.id, width: element.bounds.width, height: element.bounds.height }));
-
-    if (nodes.length === 0) {
-      return;
-    }
-
-    const edges: LayoutEdge[] = diagram.ownedRelationships
-      .map((id) => elements[id] as IUMLRelationship | undefined)
-      .filter((rel): rel is IUMLRelationship => Boolean(rel && rel.source && rel.target))
-      .map((rel) => ({ id: rel.id, sourceId: rel.source.element, targetId: rel.target.element }));
-
-    const positions = await computeElkLayout(nodes, edges);
-
-    const dispatch = this.store!.dispatch as Dispatch;
-    for (const position of positions) {
-      const element = elements[position.id];
-      if (!element) {
-        continue;
-      }
-      const delta = { x: position.x - element.bounds.x, y: position.y - element.bounds.y };
-      if (delta.x === 0 && delta.y === 0) {
-        continue;
-      }
-      dispatch<MoveAction>({
-        type: MovingActionTypes.MOVE,
-        payload: { ids: [position.id], delta },
-        undoable: false,
-      });
-    }
-
-    // Re-route relationships and reflow class members to the new positions.
-    dispatch(LayouterRepository.layout());
+    (this.store!.dispatch as Dispatch)(AutoLayoutRepository.layout());
   }
 
   /**
