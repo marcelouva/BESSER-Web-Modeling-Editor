@@ -3,6 +3,7 @@ import { FolderKanban } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CommunityMenu } from './menus/CommunityMenu';
 import { DeployMenu } from './menus/DeployMenu';
+import { AutoLayoutButton } from './menus/AutoLayoutButton';
 import { FileMenu } from './menus/FileMenu';
 import { GenerateMenu } from './menus/GenerateMenu';
 import { HelpMenu } from './menus/HelpMenu';
@@ -113,6 +114,7 @@ const WorkspaceTopBarInner: React.FC<WorkspaceTopBarProps> = ({
             onGenerate={onGenerate}
             onSwitchDiagramType={onSwitchDiagramType}
           />
+          <AutoLayoutButton outlineButtonClass={outlineButtonClass} />
           <DeployMenu
             outlineButtonClass={outlineButtonClass}
             isAuthenticated={isAuthenticated}
