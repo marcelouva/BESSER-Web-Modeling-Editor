@@ -756,7 +756,16 @@ class StateUpdate extends Component<Props, State> {
               onDrop={(e) => {
                 e.preventDefault();
                 const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
-                if (!Number.isNaN(fromIndex) && fromIndex !== index) {
+                // Only reorder within the same section. Without this guard a card
+                // dragged from the body list and dropped on the fallback list (or
+                // vice versa) calls swapActions with an index from the other list,
+                // dereferencing an out-of-range member and crashing.
+                if (
+                  this.state.draggingPrefix === prefix &&
+                  !Number.isNaN(fromIndex) &&
+                  fromIndex !== index &&
+                  fromIndex < actions.length
+                ) {
                   this.swapActions(actions, fromIndex, index);
                 }
                 this.setState({ draggingIndex: null, draggingPrefix: null, dragOverIndex: null, dragOverPrefix: null });
