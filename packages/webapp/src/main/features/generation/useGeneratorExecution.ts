@@ -925,6 +925,7 @@ export function useGeneratorExecution(editor: ApollonEditor | undefined): UseGen
     const agentConfig = diagramConfig
       ? normalizeAgentRuntimeConfig({
         agentPlatform: typeof diagramConfig.agentPlatform === 'string' ? diagramConfig.agentPlatform : undefined,
+        agentPlatformUseStreamlit: typeof diagramConfig.agentPlatformUseStreamlit === 'boolean' ? diagramConfig.agentPlatformUseStreamlit : undefined,
         intentRecognitionTechnology: diagramConfig.intentRecognitionTechnology,
         agentLlmProvider: llmBlock?.provider,
         agentLlmModel: typeof llmBlock?.model === 'string' ? llmBlock.model : undefined,
@@ -941,8 +942,12 @@ export function useGeneratorExecution(editor: ApollonEditor | undefined): UseGen
       diagramConfig && typeof diagramConfig.default_llm_name === 'string' && diagramConfig.default_llm_name
         ? diagramConfig.default_llm_name
         : undefined;
+    const resolvedAgentPlatform =
+      agentConfig.agentPlatform === 'websocket' && agentConfig.agentPlatformUseStreamlit
+        ? 'streamlit'
+        : agentConfig.agentPlatform;
     const systemConfig: AgentConfig = {
-      agentPlatform: agentConfig.agentPlatform,
+      agentPlatform: resolvedAgentPlatform,
       intentRecognitionTechnology: agentConfig.intentRecognitionTechnology,
       ...(defaultLlmNameFromDiagram ? { default_llm_name: defaultLlmNameFromDiagram } : {}),
       ...(agentConfig.agentLlmName
