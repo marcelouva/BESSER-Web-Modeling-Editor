@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ApollonEditor, UMLDiagramType, UMLModel } from '@besser/wme';
+import { ApollonEditor, UMLDiagramType, UMLModel, normalizeAgentModel } from '@besser/wme';
 import { toast } from 'react-toastify';
 
 import { useAppDispatch } from '../../app/store/hooks';
@@ -1013,7 +1013,12 @@ export function useGeneratorExecution(editor: ApollonEditor | undefined): UseGen
             name: profile.name,
             configuration: structuredClone(config.config),
             user_profile: structuredClone(profile.model),
-            agent_model: structuredClone(agentModel),
+            // Normalize to the canonical nested transition shape before sending.
+            // Variant/config snapshots can bypass the editor (e.g. imported
+            // projects) and still carry the legacy flat shape, which the backend
+            // collapses to when_no_intent_matched. normalizeAgentModel is pure
+            // and idempotent and returns a fresh clone.
+            agent_model: normalizeAgentModel(agentModel as UMLModel) as Record<string, any>,
           };
         })
         .filter((entry): entry is {
