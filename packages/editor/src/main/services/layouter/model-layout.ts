@@ -1,5 +1,8 @@
 import { UMLModel } from '../../typings';
-import { computeElkLayout, LayoutEdge, LayoutNode } from './elk-layouter';
+import { IBoundary } from '../../utils/geometry/boundary';
+import { IPath } from '../../utils/geometry/path';
+import { Direction } from '../uml-element/uml-element-port';
+import { computeElkLayout, LayoutEdge, LayoutNode, LayoutPoint } from './elk-layouter';
 
 /**
  * Lays out a UML class model with ELK and returns a NEW model whose elements
@@ -9,8 +12,10 @@ import { computeElkLayout, LayoutEdge, LayoutNode } from './elk-layouter';
  * Top-level elements (classes/enums, `owner === null`) are placed by ELK; their
  * child members (attributes/methods) are shifted by the same delta so they stay
  * attached. The layout is recentered onto the model's current center so it does
- * not jump toward the origin. Relationship paths are left untouched — the editor
- * recomputes non-manually-layouted relationships when the model is rendered.
+ * not jump toward the origin. Relationships are re-routed using ELK's own edge
+ * geometry and marked `isManuallyLayouted` so the rendered model is internally
+ * consistent without depending on the editor's layouter saga (which does not run
+ * reliably in a headless/jsdom editor).
  */
 export async function layoutModel(model: UMLModel): Promise<UMLModel> {
   const topLevel = Object.values(model.elements).filter((element) => element.owner === null);
@@ -28,7 +33,7 @@ export async function layoutModel(model: UMLModel): Promise<UMLModel> {
     .filter((rel) => Boolean(rel.source?.element && rel.target?.element))
     .map((rel) => ({ id: rel.id, sourceId: rel.source.element, targetId: rel.target.element }));
 
-  const positions = await computeElkLayout(nodes, edges);
+  const { nodes: positions, edges: routes } = await computeElkLayout(nodes, edges);
   if (positions.length === 0) {
     return model;
   }
@@ -84,5 +89,64 @@ export async function layoutModel(model: UMLModel): Promise<UMLModel> {
       : element;
   }
 
-  return { ...model, elements };
+  // Re-route relationships from ELK's edge geometry. ELK's coordinates share the
+  // layout origin, so the same recentering `offset` maps them onto the moved
+  // boxes. Each route becomes the relationship's path (relative to its own
+  // bounds, the Apollon convention) with anchors derived from where the route
+  // meets each box. Marking the relationship manually-layouted keeps the
+  // editor's layouter saga from overwriting it on import.
+  const routeById = new Map(routes.map((route) => [route.id, route.points]));
+  const relationships: UMLModel['relationships'] = {};
+  for (const [id, relationship] of Object.entries(model.relationships)) {
+    const elkPoints = routeById.get(id);
+    if (!elkPoints || elkPoints.length < 2) {
+      relationships[id] = relationship;
+      continue;
+    }
+
+    const absolute = elkPoints.map((point) => ({ x: point.x + offset.x, y: point.y + offset.y }));
+    const xs = absolute.map((point) => point.x);
+    const ys = absolute.map((point) => point.y);
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+    const bounds: IBoundary = { x: minX, y: minY, width: Math.max(...xs) - minX, height: Math.max(...ys) - minY };
+    const path = absolute.map((point) => ({ x: point.x - minX, y: point.y - minY })) as IPath;
+
+    relationships[id] = {
+      ...relationship,
+      path,
+      bounds,
+      source: {
+        ...relationship.source,
+        direction: borderDirection(absolute[0], elements[relationship.source.element]?.bounds) ?? relationship.source.direction,
+      },
+      target: {
+        ...relationship.target,
+        direction:
+          borderDirection(absolute[absolute.length - 1], elements[relationship.target.element]?.bounds) ??
+          relationship.target.direction,
+      },
+      isManuallyLayouted: true,
+    };
+  }
+
+  return { ...model, elements, relationships };
+}
+
+/**
+ * Classifies which side of `box` a routed endpoint sits on, so the relationship
+ * anchor (and its marker/labels) faces the correct border. Returns `undefined`
+ * when the connected box is missing so the caller keeps the existing anchor.
+ */
+function borderDirection(point: LayoutPoint, box?: IBoundary): Direction | undefined {
+  if (!box) {
+    return undefined;
+  }
+  const candidates: Array<[Direction, number]> = [
+    [Direction.Up, Math.abs(point.y - box.y)],
+    [Direction.Down, Math.abs(point.y - (box.y + box.height))],
+    [Direction.Left, Math.abs(point.x - box.x)],
+    [Direction.Right, Math.abs(point.x - (box.x + box.width))],
+  ];
+  return candidates.reduce((closest, current) => (current[1] < closest[1] ? current : closest))[0];
 }
