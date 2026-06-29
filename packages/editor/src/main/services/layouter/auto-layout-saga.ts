@@ -7,7 +7,7 @@ import { MoveAction, MovingActionTypes } from '../uml-element/movable/moving-typ
 import { UMLElement } from '../uml-element/uml-element';
 import { IUMLRelationship, UMLRelationship } from '../uml-relationship/uml-relationship';
 import { AutoLayoutActionTypes } from './auto-layout-types';
-import { computeElkLayout, LayoutEdge, LayoutNode, LayoutPosition } from './elk-layouter';
+import { computeElkLayout, ElkLayoutResult, LayoutEdge, LayoutNode, LayoutPosition } from './elk-layouter';
 import { LayouterRepository } from './layouter-repository';
 
 export function* AutoLayouter() {
@@ -37,7 +37,9 @@ function* autoLayout(): SagaIterator {
     .filter((rel): rel is IUMLRelationship => Boolean(rel && UMLRelationship.isUMLRelationship(rel) && rel.source && rel.target))
     .map((rel) => ({ id: rel.id, sourceId: rel.source.element, targetId: rel.target.element }));
 
-  const positions: LayoutPosition[] = yield call(computeElkLayout, nodes, edges);
+  // The interactive layouter only needs node positions here; it re-routes
+  // relationships through the editor's own layouter saga below.
+  const { nodes: positions }: ElkLayoutResult = yield call(computeElkLayout, nodes, edges);
   if (!positions.length) {
     return;
   }

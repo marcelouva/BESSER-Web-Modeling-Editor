@@ -32,6 +32,28 @@ export interface LayoutPosition {
   y: number;
 }
 
+export interface LayoutPoint {
+  x: number;
+  y: number;
+}
+
+export interface LayoutEdgeRoute {
+  id: string;
+  /**
+   * Absolute waypoints in the layout's coordinate space (same origin as the
+   * node positions), ordered source-border → bend points → target-border.
+   * Always at least two points.
+   */
+  points: LayoutPoint[];
+}
+
+export interface ElkLayoutResult {
+  /** New top-left position for every laid-out node. */
+  nodes: LayoutPosition[];
+  /** ELK's orthogonal route for every edge it was able to lay out. */
+  edges: LayoutEdgeRoute[];
+}
+
 export interface ElkLayoutOptions {
   /** Layer flow direction. Defaults to DOWN (top-to-bottom). */
   direction?: LayoutDirection;
@@ -41,16 +63,22 @@ const elk = new ELK();
 
 /**
  * Computes new top-left positions for every node using ELK's layered
- * algorithm. Returns absolute positions (relative to the layout origin);
- * the caller maps them onto its own coordinate/move API.
+ * algorithm, plus ELK's orthogonal route for every edge. Returns absolute
+ * coordinates (relative to the layout origin); the caller maps them onto its
+ * own coordinate/move API.
+ *
+ * Edge routes are returned alongside the node positions because ELK computes
+ * both in a single pass — a headless renderer can write the routes straight
+ * into relationship paths instead of relying on the editor's layouter saga to
+ * re-route them at render time.
  */
 export async function computeElkLayout(
   nodes: LayoutNode[],
   edges: LayoutEdge[],
   options: ElkLayoutOptions = {},
-): Promise<LayoutPosition[]> {
+): Promise<ElkLayoutResult> {
   if (nodes.length === 0) {
-    return [];
+    return { nodes: [], edges: [] };
   }
 
   const nodeIds = new Set(nodes.map((node) => node.id));
@@ -75,9 +103,29 @@ export async function computeElkLayout(
 
   const laidOut = await elk.layout(graph);
 
-  return (laidOut.children ?? []).map((child) => ({
+  const nodePositions: LayoutPosition[] = (laidOut.children ?? []).map((child) => ({
     id: child.id,
     x: child.x ?? 0,
     y: child.y ?? 0,
   }));
+
+  // Flatten each edge's first section (start → bends → end) into an absolute
+  // polyline. Edges ELK could not route (no sections) are dropped so the caller
+  // falls back to whatever path the edge already had.
+  const edgeRoutes: LayoutEdgeRoute[] = (laidOut.edges ?? [])
+    .map((edge) => {
+      const section = edge.sections?.[0];
+      if (!section) {
+        return { id: edge.id, points: [] as LayoutPoint[] };
+      }
+      const points: LayoutPoint[] = [
+        section.startPoint,
+        ...(section.bendPoints ?? []),
+        section.endPoint,
+      ].map((point) => ({ x: point.x, y: point.y }));
+      return { id: edge.id, points };
+    })
+    .filter((route) => route.points.length >= 2);
+
+  return { nodes: nodePositions, edges: edgeRoutes };
 }
