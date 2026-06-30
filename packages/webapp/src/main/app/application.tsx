@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LazyPostHogProvider } from '../shared/services/analytics/LazyPostHogProvider';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import { checkSemanticModel } from '../shared/services/validation/checkSemanticModel';
 import { ApollonEditor } from '@besser/wme';
 import {
   POSTHOG_HOST,
@@ -110,6 +110,30 @@ function AppContentInner() {
     setShowExportDialog(true);
   };
 
+
+const handleSemanticCheck = useCallback(async () => {
+  if (!editor) {
+    toast.error('No diagram loaded.');
+    return;
+  }
+  try {
+    const diagramModel = (editor as any).model;
+    const result = await checkSemanticModel(diagramModel, activeDiagramTitle);
+    if (result.sat === true) {
+      toast.success('✅ Semantic Check passed — model is satisfiable.');
+    } else if (result.sat === false) {
+      toast.error('❌ Semantic Check failed — model is unsatisfiable.');
+    } else {
+      toast.warning(`⚠️ ${result.message}`);
+    }
+  } catch {
+    toast.error('Semantic Check error — could not reach the backend.');
+  }
+}, [editor, activeDiagramTitle]);
+
+
+
+
   // Onboarding system — disabled for now
   // const onboarding = useOnboarding();
   const onboarding = null as any;
@@ -122,12 +146,16 @@ function AppContentInner() {
         onExportProject={handleExport}
         onGenerate={(type, config) => handleGenerateRequest(type, config)}
         onQualityCheck={() => handleQualityCheck()}
+        onSemanticCheck={() => handleSemanticCheck()}   // ← agregás esto
         showQualityCheck={true}
         generatorMode={generatorMenuMode}
         isGenerating={isGenerating}
         onAssistantGenerate={handleAssistantGenerate}
         onboarding={onboarding}
       >
+
+
+
         <Suspense fallback={<SuspenseFallback showSkeleton />}>
           <Routes>
             <Route path="/" element={<EditorView />} />

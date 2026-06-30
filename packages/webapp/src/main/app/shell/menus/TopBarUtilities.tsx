@@ -27,6 +27,7 @@ interface TopBarUtilitiesProps {
   activeAgentVariantId?: string;
   onAgentVariantChange?: (variantId: string) => void;
   onQualityCheck: () => Promise<QualityCheckResult>;
+  onSemanticCheck: () => Promise<QualityCheckResult>;
   onToggleTheme: () => void;
   onGitHubLogin: () => void;
   onGitHubLogout: () => void;
@@ -49,6 +50,7 @@ export const TopBarUtilities: React.FC<TopBarUtilitiesProps> = ({
   activeAgentVariantId,
   onAgentVariantChange,
   onQualityCheck,
+  onSemanticCheck,
   onToggleTheme,
   onGitHubLogin,
   onGitHubLogout,
@@ -95,25 +97,34 @@ export const TopBarUtilities: React.FC<TopBarUtilitiesProps> = ({
         </div>
       )}
 
-      {showQualityCheck && (
-        <Button
-          variant="outline"
-          className={`gap-2 ${outlineButtonClass}`}
-          onClick={() => {
-            void onQualityCheck();
-          }}
-          title={qualityStateLabel ? `Quality Check (${qualityStateLabel})` : 'Quality Check'}
-        >
-          <CheckCircle className="size-4" />
-          <span className="hidden xl:inline">Quality Check</span>
-          {qualityStateLabel && (
-            <span className="hidden items-center gap-1 rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-[10px] font-medium xl:inline-flex">
-              <span className={`size-1.5 rounded-full ${qualityStateDotClass}`} aria-hidden="true" />
-              <span>{qualityStateLabel}</span>
-            </span>
-          )}
-        </Button>
-      )}
+     {showQualityCheck && (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="outline"
+        className={`gap-2 ${outlineButtonClass}`}
+        title={qualityStateLabel ? `Quality Check (${qualityStateLabel})` : 'Quality Check'}
+      >
+        <CheckCircle className="size-4" />
+        <span className="hidden xl:inline">Quality Check</span>
+        {qualityStateLabel && (
+          <span className="hidden items-center gap-1 rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-[10px] font-medium xl:inline-flex">
+            <span className={`size-1.5 rounded-full ${qualityStateDotClass}`} aria-hidden="true" />
+            <span>{qualityStateLabel}</span>
+          </span>
+        )}
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      <DropdownMenuItem onClick={() => { void onQualityCheck(); }}>
+        Syntactic Check
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => { void onSemanticCheck(); }}>
+        Semantic Check
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+)}
 
       <Button
         variant="outline"

@@ -56,6 +56,13 @@ const CLASS_GENERATORS: GeneratorMenuEntry[] = [
       { kind: 'action', label: 'Smart Data Models', generator: 'smartdata' },
     ],
   },
+  {
+    kind: 'group',
+    label: 'Formal Methods',
+    actions: [
+      { kind: 'action', label: 'Alloy Specification', generator: 'alloy' },
+    ],
+  },
 ];
 
 const AGENT_GENERATORS: GeneratorMenuEntry[] = [
