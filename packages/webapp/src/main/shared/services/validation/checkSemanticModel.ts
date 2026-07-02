@@ -2,7 +2,6 @@ import { BACKEND_URL } from '../../constants/constant';
 import { toast } from 'react-toastify';
 import type { CSSProperties } from 'react';
 
-// Reutilizamos el estilo limpio y scrolleable que usas en el otro validador
 const TOAST_STYLE: CSSProperties = {
   fontSize: "16px",
   padding: "20px",
@@ -15,11 +14,14 @@ const TOAST_STYLE: CSSProperties = {
   wordBreak: "break-word"
 };
 
+
+
+
+
 export async function checkSemanticModel(
   model: object,
   title: string = 'diagram'
-): Promise<{ sat: boolean | null; message: string }> {
-  
+): Promise<{ sat: boolean | null; message: string; objectDiagram?: object | null }> {  
   const TOAST_LOADING_ID = 'semantic-check-loading';
 
   toast.loading("Running semantic check...", {
