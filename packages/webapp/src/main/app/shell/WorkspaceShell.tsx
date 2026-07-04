@@ -92,7 +92,7 @@ interface WorkspaceShellProps {
   onExportProject: () => void;
   onGenerate: (type: GeneratorType, config?: Record<string, any>) => void;
   onQualityCheck: () => Promise<QualityCheckResult>;
-  onSemanticCheck: () => Promise<QualityCheckResult>;
+  onConsistencyCheck: () => Promise<QualityCheckResult>;
   showQualityCheck?: boolean;
   generatorMode: GeneratorMenuMode;
   isGenerating?: boolean;
@@ -138,7 +138,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
   onExportProject,
   onGenerate,
   onQualityCheck,
-  onSemanticCheck,  
+  onConsistencyCheck,  
   showQualityCheck = false,
   generatorMode,
   isGenerating = false,
@@ -755,7 +755,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
         onOpenProjectPreview={handleOpenProjectPreview}
         onGenerate={onGenerate}
         onQualityCheck={handleTrackedQualityCheck}
-        onSemanticCheck={onSemanticCheck}  
+        onConsistencyCheck={onConsistencyCheck}  
 
 
         qualityCheckState={activeQualityCheckState}

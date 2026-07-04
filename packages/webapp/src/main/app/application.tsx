@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LazyPostHogProvider } from '../shared/services/analytics/LazyPostHogProvider';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { checkSemanticModel } from '../shared/services/validation/checkSemanticModel';
+import { checkConsistency } from '../shared/services/validation/checkConsistencyModel';
 import { ApollonEditor } from '@besser/wme';
 import {
   POSTHOG_HOST,
@@ -111,23 +111,23 @@ function AppContentInner() {
   };
 
 
-const handleSemanticCheck = useCallback(async () => {
+const handleConsistencyCheck = useCallback(async () => {
   if (!editor) {
     toast.error('No diagram loaded.');
     return;
   }
   try {
     const diagramModel = (editor as any).model;
-    const result = await checkSemanticModel(diagramModel, activeDiagramTitle);
+      const result = await checkConsistency(diagramModel, activeDiagramTitle);
     if (result.sat === true) {
-      toast.success('✅ Semantic Check passed — model is satisfiable.');
+      toast.success('✅ Sat Consitency Check passed — model is satisfiable.');
     } else if (result.sat === false) {
-      toast.error('❌ Semantic Check failed — model is unsatisfiable.');
+      toast.error('❌ Sat Consitency Check failed — model is unsatisfiable.');
     } else {
       toast.warning(`⚠️ ${result.message}`);
     }
   } catch {
-    toast.error('Semantic Check error — could not reach the backend.');
+    toast.error('Sat Consitency Check error — could not reach the backend.');
   }
 }, [editor, activeDiagramTitle]);
 
@@ -146,7 +146,7 @@ const handleSemanticCheck = useCallback(async () => {
         onExportProject={handleExport}
         onGenerate={(type, config) => handleGenerateRequest(type, config)}
         onQualityCheck={() => handleQualityCheck()}
-        onSemanticCheck={() => handleSemanticCheck()}   // ← agregás esto
+        onConsistencyCheck={() => handleConsistencyCheck()}   // ← agregás esto
         showQualityCheck={true}
         generatorMode={generatorMenuMode}
         isGenerating={isGenerating}

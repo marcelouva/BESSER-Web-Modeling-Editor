@@ -17,21 +17,20 @@ const TOAST_STYLE: CSSProperties = {
 
 
 
-
-export async function checkSemanticModel(
+export async function checkConsistency(
   model: object,
   title: string = 'diagram'
 ): Promise<{ sat: boolean | null; message: string; objectDiagram?: object | null }> {  
-  const TOAST_LOADING_ID = 'semantic-check-loading';
+  const TOAST_LOADING_ID = 'sat-consistency-check-loading';
 
-  toast.loading("Running semantic check...", {
+  toast.loading("Running SAT consistency check...", {
     toastId: TOAST_LOADING_ID,
     position: "top-right",
     theme: "dark",
   });
 
   try {
-    const response = await fetch(`${BACKEND_URL}/check-alloy-sat`, {
+    const response = await fetch(`${BACKEND_URL}/check-alloy-consistency`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, model }),
@@ -48,7 +47,7 @@ export async function checkSemanticModel(
 
     if (result.sat === true) {
       // The model is SAT
-      toast.success(result.message || "✅ Semantic Check OK: The model is satisfiable.", {
+      toast.success(result.message || "✅ SAT Consistency Check OK: The model is satisfiable.", {
         position: "top-right",
         autoClose: 5000,
         theme: "dark",
@@ -56,7 +55,7 @@ export async function checkSemanticModel(
       });
     } else if (result.sat === false) {
       // The model is UNSAT
-      toast.error(result.message || "❌ Semantic Check Failed: The model is unsatisfiable.", {
+      toast.error(result.message || "❌ SAT Consistency Check Failed: The model is unsatisfiable.", {
         position: "top-right",
         autoClose: false, 
         theme: "dark",
@@ -79,7 +78,7 @@ export async function checkSemanticModel(
     toast.dismiss(TOAST_LOADING_ID);
     
     const errorMessage = error instanceof Error ? error.message : 'Error unknown.';
-    toast.error(`❌ Error in the semantic check: ${errorMessage}`, {
+    toast.error(`❌ Error in the SAT consistency check: ${errorMessage}`, {
       position: "top-right",
       autoClose: 5000,
       theme: "dark"

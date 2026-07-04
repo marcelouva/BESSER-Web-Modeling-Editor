@@ -27,7 +27,7 @@ interface TopBarUtilitiesProps {
   activeAgentVariantId?: string;
   onAgentVariantChange?: (variantId: string) => void;
   onQualityCheck: () => Promise<QualityCheckResult>;
-  onSemanticCheck: () => Promise<QualityCheckResult>;
+  onConsistencyCheck: () => Promise<QualityCheckResult>;
   onToggleTheme: () => void;
   onGitHubLogin: () => void;
   onGitHubLogout: () => void;
@@ -50,7 +50,7 @@ export const TopBarUtilities: React.FC<TopBarUtilitiesProps> = ({
   activeAgentVariantId,
   onAgentVariantChange,
   onQualityCheck,
-  onSemanticCheck,
+  onConsistencyCheck,
   onToggleTheme,
   onGitHubLogin,
   onGitHubLogout,
@@ -119,8 +119,8 @@ export const TopBarUtilities: React.FC<TopBarUtilitiesProps> = ({
       <DropdownMenuItem onClick={() => { void onQualityCheck(); }}>
         Syntactic Check
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { void onSemanticCheck(); }}>
-        Semantic Check
+      <DropdownMenuItem onClick={() => { void onConsistencyCheck(); }}>
+        Sat Consitency Check
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

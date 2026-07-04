@@ -58,7 +58,7 @@ const CLASS_GENERATORS: GeneratorMenuEntry[] = [
   },
   {
     kind: 'group',
-    label: 'Formal Methods',
+    label: 'Formal Notations',
     actions: [
       { kind: 'action', label: 'Alloy Specification', generator: 'alloy' },
     ],
