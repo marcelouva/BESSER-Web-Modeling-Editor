@@ -132,8 +132,6 @@ const handleConsistencyCheck = useCallback(async () => {
 }, [editor, activeDiagramTitle]);
 
 
-
-
   // Onboarding system — disabled for now
   // const onboarding = useOnboarding();
   const onboarding = null as any;
