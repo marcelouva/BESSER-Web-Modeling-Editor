@@ -192,7 +192,8 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
       toast.warning('The referenced Class Diagram has no classes to instantiate.');
       return;
     }
-
+   
+    //En ese punto se invoca al scaffoldObjectsFromClasses, que es el que genera los objetos a partir de las clases
     const { model: nextModel, created, skipped, links } = scaffoldObjectsFromClasses({
       classModel: refModel,
       objectModel: apollonEditor.model,
@@ -214,6 +215,66 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
       toast.success(`Generated ${created} object${created === 1 ? '' : 's'}${linksFragment} from the class diagram.`);
     }
     getPostHog()?.capture('object_diagram_generated_from_class', { created, skipped, links });
+  }, [apollonEditor, classDiagrams, classRefId, currentDiagramType, dispatch]);
+
+  const handleGenerateSat = useCallback(async () => {
+    if (currentDiagramType !== 'ObjectDiagram') return;
+    if (!apollonEditor || !apollonEditor.model) {
+      toast.error('Editor is not ready yet.');
+      return;
+    }
+
+    const refDiagram = classDiagrams.find((d) => d.id === classRefId);
+    const refModel = refDiagram?.model;
+    if (!isUMLModel(refModel)) {
+      toast.error('Pick a Class Diagram reference first.');
+      return;
+    }
+
+    const backendBase = (((globalThis as any).process?.env?.BACKEND_URL as string) || '').replace(/\/$/, '');
+    const endpointUrl = `${backendBase}/besser_api/generate-alloy-do`;
+
+    try {
+      const response = await fetch(endpointUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: refDiagram?.title ?? 'Class Diagram',
+          model: refModel,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(errorBody || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result?.sat !== true) {
+        toast.warning(result?.message ?? 'Model is unsatisfiable.');
+        return;
+      }
+
+      const nextModel = result?.object_model;
+      if (!isUMLModel(nextModel)) {
+        toast.warning('SAT instance found, but Object Diagram payload is missing.');
+        return;
+      }
+
+      await dispatch(updateDiagramModelThunk({ model: nextModel as any })).unwrap();
+      await apollonEditor.nextRender;
+      apollonEditor.model = { ...nextModel } as any;
+      await apollonEditor.nextRender;
+
+      toast.success(result?.message ?? 'SAT instance generated successfully.');
+      getPostHog()?.capture('object_diagram_generated_from_sat', {
+        elements: Object.keys(nextModel.elements ?? {}).length,
+        relationships: Object.keys(nextModel.relationships ?? {}).length,
+      });
+    } catch (error: any) {
+      const details = typeof error?.message === 'string' ? error.message : String(error);
+      toast.error(`Failed to generate SAT instance: ${details}`);
+    }
   }, [apollonEditor, classDiagrams, classRefId, currentDiagramType, dispatch]);
 
   const showTabs = diagrams.length > 0;
@@ -469,15 +530,26 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
                       </span>
                     )}
                     {currentDiagramType === 'ObjectDiagram' && !classRefBroken && !classRefEmpty && (
-                      <button
-                        type="button"
-                        className="ml-1 inline-flex items-center gap-1 rounded-md border border-brand/15 bg-card px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm transition-colors hover:border-brand/30 hover:bg-brand/[0.04] focus:outline-none focus:ring-1 focus:ring-brand/20"
-                        onClick={() => void handleGenerateObjectsFromClasses()}
-                        title="Create one Object instance per Class in the referenced diagram, with default values for each attribute."
-                      >
-                        <Wand2 className="size-3" />
-                        Generate
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="ml-1 inline-flex items-center gap-1 rounded-md border border-brand/15 bg-card px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm transition-colors hover:border-brand/30 hover:bg-brand/[0.04] focus:outline-none focus:ring-1 focus:ring-brand/20"
+                          onClick={() => void handleGenerateObjectsFromClasses()}
+                          title="Create one Object instance per Class in the referenced diagram, with default values for each attribute."
+                        >
+                          <Wand2 className="size-3" />
+                          Generate
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-md border border-brand/15 bg-card px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm transition-colors hover:border-brand/30 hover:bg-brand/[0.04] focus:outline-none focus:ring-1 focus:ring-brand/20"
+                          onClick={handleGenerateSat}
+                          title="Generate SAT consistency report for the current Object Diagram context."
+                        >
+                          <Wand2 className="size-3" />
+                          Generate Sat
+                        </button>
+                      </>
                     )}
                   </>
                 ) : (
