@@ -5,6 +5,7 @@ import { Plus, X, FileText, Info, Link2, AlertTriangle, ChevronDown, ChevronRigh
 import { toast } from 'react-toastify';
 import { Input } from '@/components/ui/input';
 import { getPostHog } from '../../../shared/services/analytics/lazy-analytics';
+import { BACKEND_URL } from '../../../shared/constants/constant';
 import { ProjectDiagram, MAX_DIAGRAMS_PER_TYPE, SupportedDiagramType, isUMLModel, isGrapesJSProjectData, isQuantumCircuitData } from '../../../shared/types/project';
 import { useAppDispatch, useAppSelector } from '../../../app/store/hooks';
 import type { QualityCheckState } from '../../generation/types';
@@ -231,8 +232,10 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
       return;
     }
 
-    const backendBase = (((globalThis as any).process?.env?.BACKEND_URL as string) || '').replace(/\/$/, '');
-    const endpointUrl = `${backendBase}/besser_api/generate-alloy-do`;
+    const backendBase = (BACKEND_URL || '').replace(/\/$/, '');
+    const endpointUrl = backendBase.endsWith('/besser_api')
+      ? `${backendBase}/generate-alloy-do`
+      : `${backendBase}/besser_api/generate-alloy-do`;
 
     try {
       const response = await fetch(endpointUrl, {
@@ -243,6 +246,9 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
           model: refModel,
         }),
       });
+      
+
+      //seguir aca
 
       if (!response.ok) {
         const errorBody = await response.text();
