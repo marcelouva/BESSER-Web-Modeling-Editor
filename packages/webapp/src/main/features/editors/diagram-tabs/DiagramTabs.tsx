@@ -248,8 +248,6 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
       });
       
 
-      //seguir aca
-
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(errorBody || `HTTP ${response.status}`);
@@ -553,7 +551,7 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
                           title="Generate SAT consistency report for the current Object Diagram context."
                         >
                           <Wand2 className="size-3" />
-                          Generate Sat
+                          Generate Objects with Sat
                         </button>
                       </>
                     )}
