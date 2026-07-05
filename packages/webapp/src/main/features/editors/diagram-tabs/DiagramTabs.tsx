@@ -551,7 +551,7 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
                           title="Generate SAT consistency report for the current Object Diagram context."
                         >
                           <Wand2 className="size-3" />
-                          Generate Objects with Sat
+                          SAT-based generate
                         </button>
                       </>
                     )}
