@@ -2,6 +2,7 @@ import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LazyPostHogProvider } from '../shared/services/analytics/LazyPostHogProvider';
 import { ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { checkConsistency } from '../shared/services/validation/checkConsistencyModel';
 import { ApollonEditor } from '@besser/wme';
@@ -26,9 +27,6 @@ import { GeneratingOverlay } from '../shared/components/loading/GeneratingOverla
 import { GlobalConfirmProvider } from '../shared/services/confirm/GlobalConfirmProvider';
 import { ErrorBoundary } from '../shared/components/error-handling/AppErrorBoundary';
 import { NotFound } from '../shared/components/NotFound';
-import { useOnboarding } from '../features/onboarding/useOnboarding';
-import { useAppSelector } from './store/hooks';
-import { selectActiveDiagram } from './store/workspaceSlice';
 
 // Lazy-loaded route-level components (only fetched when their route is visited)
 const AgentConfigurationPanel = React.lazy(() =>
@@ -76,7 +74,7 @@ function AppContentInner() {
   // Keep Redux in sync with direct localStorage writes from editors
   useStorageSync();
 
-  const { currentProject, loadProject } = useProject();
+const { currentProject, currentDiagramType, loadProject } = useProject();
   const loadProjectForBootstrap = useCallback(
     async (projectId: string): Promise<void> => {
       await loadProject(projectId);
@@ -88,11 +86,14 @@ function AppContentInner() {
     loadProject: loadProjectForBootstrap,
     pathname: location.pathname,
   });
-  const { generatorMenuMode } = getWorkspaceContext(
-    location.pathname,
-    currentProject?.currentDiagramType,
-  );
 
+
+
+  const { generatorMenuMode } = getWorkspaceContext(
+  location.pathname,
+  currentDiagramType,   // selector reactivo selectActiveDiagramType
+);
+  
   const activeDiagram = currentProject ? getActiveDiagram(currentProject, currentProject.currentDiagramType) : undefined;
   const activeDiagramTitle = activeDiagram?.title || currentProject?.name || 'Diagram';
 
@@ -141,7 +142,7 @@ const handleConsistencyCheck = useCallback(async () => {
         onOpenProjectHub={() => setShowProjectHub(true)}
         onOpenTemplateDialog={() => setShowTemplateDialog(true)}
         onExportProject={handleExport}
-        onGenerate={(type, config) => handleGenerateRequest(type, config)}
+        onGenerate={handleGenerateRequest}
         onQualityCheck={() => handleQualityCheck()}
         onConsistencyCheck={() => handleConsistencyCheck()}   // ← agregás esto
         showQualityCheck={true}
