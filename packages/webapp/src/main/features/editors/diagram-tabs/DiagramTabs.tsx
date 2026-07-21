@@ -261,7 +261,8 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
 
       const nextModel = result?.object_model;
       if (!isUMLModel(nextModel)) {
-        toast.warning('SAT instance found, but Object Diagram payload is missing.');
+        const details = typeof result?.error === 'string' ? ` ${result.error}` : '';
+        toast.warning(`SAT instance found, but Object Diagram payload is missing.${details}`);
         return;
       }
 
