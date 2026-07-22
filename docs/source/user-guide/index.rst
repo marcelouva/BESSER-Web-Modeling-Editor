@@ -8,6 +8,7 @@ Welcome to the BESSER Web Modeling Editor User Guide. This section provides deta
    :caption: Contents:
 
    use_the_wme
+   quality_check
    projects
    deploy_locally
    diagrams/index

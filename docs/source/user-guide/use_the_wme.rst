@@ -76,10 +76,20 @@ The *Help* menu provides guidance and information:
 6. Quality Check
 ~~~~~~~~~~~~~~~~
 
-Click the **Quality Check** button to validate your model. The editor checks for
-errors including duplicate class names, invalid OCL constraint syntax, and
-structural model consistency. Validation results are displayed with specific
-error messages.
+Click the **Quality Check** button to run one of two validation modes:
+
+- **Syntactic Check**: validates model construction and metamodel rules, and
+  checks OCL-related constraints when applicable to the active diagram type.
+- **Semantic Consistency Check**: available for **Class Diagrams**. This mode
+  translates the model to Alloy and runs a SAT check to determine whether at
+  least one valid instance exists.
+
+Result interpretation:
+
+- **Syntactic Check** returns validation status with detailed errors/warnings.
+- **Semantic Consistency Check** returns ``sat = true`` (consistent),
+  ``sat = false`` (inconsistent), or ``sat = null`` when consistency cannot be
+  determined.
 
 7. GitHub and Utilities
 ~~~~~~~~~~~~~~~~~~~~~~~
