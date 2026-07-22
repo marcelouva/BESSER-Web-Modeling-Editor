@@ -92,7 +92,9 @@ You can add Object Constraint Language (OCL) constraints to your model:
 1.  Drag the OCL shape onto the canvas.
 2.  Write constraints in the format ``Context "class_name" ...``.
 3.  Link them to classes with dotted lines.
-4.  Use the **Quality Check** button to validate the syntax.
+4.  Use **Quality Check → Syntactic Check** to validate syntax and structural rules.
+5.  Use **Quality Check → Semantic Consistency Check** to run an Alloy-based
+  satisfiability check for the class model.
 
 **Example:**
 

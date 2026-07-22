@@ -49,4 +49,12 @@ Double-click the link to:
 OCL Constraint Validation
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When you click the **Quality Check** button, the editor validates the object diagram against any OCL constraints defined in the structural model. This allows you to verify invariants, pre-conditions, and post-conditions on real data examples.
+When you run **Quality Check → Syntactic Check**, the editor validates the
+object diagram against OCL constraints defined in the structural model. This
+allows you to verify invariants, pre-conditions, and post-conditions on real
+data examples.
+
+.. note::
+
+  **Semantic Consistency Check** is available for **Class Diagrams** only.
+  For object diagrams, use **Syntactic Check**.
