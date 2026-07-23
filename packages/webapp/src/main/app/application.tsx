@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { checkConsistency } from '../shared/services/validation/checkConsistencyModel';
 import { ApollonEditor } from '@besser/wme';
+import { checkConsistencyStream } from '../shared/services/validation/checkConsistencyModel';
 import {
   POSTHOG_HOST,
   POSTHOG_KEY,
@@ -110,27 +111,56 @@ const { currentProject, currentDiagramType, loadProject } = useProject();
   const handleExport = () => {
     setShowExportDialog(true);
   };
-
+//----------------------------
 
 const handleConsistencyCheck = useCallback(async () => {
   if (!editor) {
     toast.error('No diagram loaded.');
     return;
   }
+
+  // Toast de progreso que se va actualizando
+  const toastId = toast.loading('🔍 Starting consistency check...');
+
   try {
     const diagramModel = (editor as any).model;
-      const result = await checkConsistency(diagramModel, activeDiagramTitle);
-    if (result.sat === true) {
-      toast.success('✅ Sat Consitency Check passed — model is satisfiable.');
-    } else if (result.sat === false) {
-      toast.error('❌ Sat Consitency Check failed — model is unsatisfiable.');
-    } else {
-      toast.warning(`⚠️ ${result.message}`);
-    }
+
+    await checkConsistencyStream(diagramModel, activeDiagramTitle, (data) => {
+      if (data.done) {
+        // Mensaje final — reemplaza el toast de progreso
+        if (data.sat === true) {
+          toast.update(toastId, {
+            render: `✅ ${data.message}`,
+            type: 'success',
+            isLoading: false,
+            autoClose: 5000,
+          });
+        } else {
+          toast.update(toastId, {
+            render: `❌ ${data.message}`,
+            type: 'error',
+            isLoading: false,
+            autoClose: 5000,
+          });
+        }
+      } else {
+        // Mensaje intermedio — actualiza el toast de progreso
+        toast.update(toastId, {
+          render: data.message,
+        });
+      }
+    });
   } catch {
-    toast.error('Sat Consitency Check error — could not reach the backend.');
+    toast.update(toastId, {
+      render: 'Consistency Check error — could not reach the backend.',
+      type: 'error',
+      isLoading: false,
+      autoClose: 5000,
+    });
   }
 }, [editor, activeDiagramTitle]);
+
+//----------------------------
 
   // Onboarding system — disabled for now
   // const onboarding = useOnboarding();
