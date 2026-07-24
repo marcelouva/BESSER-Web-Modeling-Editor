@@ -144,7 +144,7 @@ const handleConsistencyCheck = useCallback(async () => {
           });
         }
       } else {
-        // Mensaje intermedio — actualiza el toast de progreso
+        // Update progress message 
         toast.update(toastId, {
           render: data.message,
         });
@@ -174,8 +174,8 @@ const handleConsistencyCheck = useCallback(async () => {
         onExportProject={handleExport}
         onGenerate={handleGenerateRequest}
         onQualityCheck={() => handleQualityCheck()}
-        onConsistencyCheck={() => handleConsistencyCheck()}   // ← agregás esto
-        showQualityCheck={true}
+        onConsistencyCheck={handleConsistencyCheck}
+        showQualityCheck={true}🔍 Check Consistency
         generatorMode={generatorMenuMode}
         isGenerating={isGenerating}
         onAssistantGenerate={handleAssistantGenerate}
