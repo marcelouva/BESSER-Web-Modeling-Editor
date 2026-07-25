@@ -175,7 +175,7 @@ const handleConsistencyCheck = useCallback(async () => {
         onGenerate={handleGenerateRequest}
         onQualityCheck={() => handleQualityCheck()}
         onConsistencyCheck={handleConsistencyCheck}
-        showQualityCheck={true}🔍 Check Consistency
+        showQualityCheck={true}
         generatorMode={generatorMenuMode}
         isGenerating={isGenerating}
         onAssistantGenerate={handleAssistantGenerate}
