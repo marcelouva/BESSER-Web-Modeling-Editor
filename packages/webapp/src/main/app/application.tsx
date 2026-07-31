@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LazyPostHogProvider } from '../shared/services/analytics/LazyPostHogProvider';
 import { ToastContainer } from 'react-toastify';
@@ -125,9 +125,20 @@ const handleConsistencyCheck = useCallback(async () => {
   try {
     const diagramModel = (editor as any).model;
 
+    const TOAST_STYLE: CSSProperties = {
+      fontSize: "16px",
+      padding: "20px",
+      width: "100%",
+      boxSizing: "border-box",
+      whiteSpace: "pre-line",
+      maxHeight: "600px",
+      overflow: "auto",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word"
+    };
+
     await checkConsistencyStream(diagramModel, activeDiagramTitle, (data) => {
       if (data.done) {
-        // Mensaje final — reemplaza el toast de progreso
         if (data.sat === true) {
           toast.update(toastId, {
             render: `✅ ${data.message}`,
@@ -140,11 +151,18 @@ const handleConsistencyCheck = useCallback(async () => {
             render: `❌ ${data.message}`,
             type: 'error',
             isLoading: false,
-            autoClose: 5000,
+            autoClose: false,
           });
+          if (data.errors?.length) {
+            toast.error(`❌ Issues found:\n\n${data.errors.join('\n\n')}`, {
+              position: "top-right",
+              autoClose: false,
+              theme: "dark",
+              style: TOAST_STYLE,
+            });
+          }
         }
       } else {
-        // Update progress message 
         toast.update(toastId, {
           render: data.message,
         });

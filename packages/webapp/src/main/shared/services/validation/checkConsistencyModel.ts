@@ -86,29 +86,31 @@ export async function checkConsistency(
     const result = await response.json();
 
     if (result.sat === true) {
-      // The model is SAT
       toast.success(result.message || "✅ SAT Consistency Check OK: The model is satisfiable.", {
         position: "top-right",
         autoClose: 5000,
         theme: "dark",
         style: TOAST_STYLE
       });
-    } else if (result.sat === false) {
-      // The model is UNSAT
-      toast.error(result.message || "❌ SAT Consistency Check Failed: The model is unsatisfiable.", {
-        position: "top-right",
-        autoClose: false, 
-        theme: "dark",
-        style: TOAST_STYLE
-      });
     } else {
-      // Case sat === null (e.g., When it's not a Class Diagram or no commands were generated)
-      toast.info(result.message || "⚠️ The satisfiability of the model could not be determined.", {
+      const checkType = result.sat === false ? 'error' : 'info';
+      const defaultMsg = result.sat === false
+        ? "❌ SAT Consistency Check Failed: The model is unsatisfiable."
+        : "⚠️ The satisfiability of the model could not be determined.";
+      toast[checkType](result.message || defaultMsg, {
         position: "top-right",
-        autoClose: 5000,
+        autoClose: checkType === 'error' ? false : 5000,
         theme: "dark",
         style: TOAST_STYLE
       });
+      if (result.errors?.length) {
+        toast.error(`❌ Issues found:\n\n${result.errors.join('\n\n')}`, {
+          position: "top-right",
+          autoClose: false,
+          theme: "dark",
+          style: TOAST_STYLE,
+        });
+      }
     }
 
     return result;
