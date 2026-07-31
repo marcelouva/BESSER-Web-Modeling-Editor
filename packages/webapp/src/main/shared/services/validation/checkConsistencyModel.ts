@@ -49,7 +49,6 @@ export async function checkConsistencyStream(
           const data = JSON.parse(line.slice(6));
           onMessage(data);
         } catch {
-          // línea incompleta, ignorar
         }
       }
     }
@@ -104,7 +103,7 @@ export async function checkConsistency(
         style: TOAST_STYLE
       });
       if (result.errors?.length) {
-        toast.error(`❌ Issues found:\n\n${result.errors.join('\n\n')}`, {
+        toast.error(`❌ Error found:\n\n${result.errors.join('\n\n')}`, {
           position: "top-right",
           autoClose: false,
           theme: "dark",

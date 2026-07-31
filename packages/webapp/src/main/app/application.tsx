@@ -151,12 +151,12 @@ const handleConsistencyCheck = useCallback(async () => {
             render: `❌ ${data.message}`,
             type: 'error',
             isLoading: false,
-            autoClose: false,
+            autoClose: 5000,
           });
           if (data.errors?.length) {
             toast.error(`❌ Issues found:\n\n${data.errors.join('\n\n')}`, {
               position: "top-right",
-              autoClose: false,
+              autoClose: 5000,
               theme: "dark",
               style: TOAST_STYLE,
             });
