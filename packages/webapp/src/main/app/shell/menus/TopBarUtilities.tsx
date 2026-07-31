@@ -120,7 +120,7 @@ export const TopBarUtilities: React.FC<TopBarUtilitiesProps> = ({
         Syntactic Check
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => { void onConsistencyCheck(); }}>
-        Sat Consitency Check
+        Sat Consistency Check
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
