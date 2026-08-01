@@ -8,8 +8,8 @@ You can use this editor:
 - Locally or self-hosted: clone this repository (or use it as a submodule in the main BESSER repo) and follow the build
   instructions below.
 
-## Repository layout
 
+## Repository layout
 This repository is a monorepo:
 
 - `packages/editor`: core diagramming engine, published as the [@besser/wme](https://www.npmjs.com/package/@besser/wme)
