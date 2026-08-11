@@ -4,7 +4,6 @@ import { LazyPostHogProvider } from '../shared/services/analytics/LazyPostHogPro
 import { ToastContainer } from 'react-toastify';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { checkConsistency } from '../shared/services/validation/checkConsistencyModel';
 import { ApollonEditor } from '@besser/wme';
 import { checkConsistencyStream } from '../shared/services/validation/checkConsistencyModel';
 import {

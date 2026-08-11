@@ -5,7 +5,7 @@ import { Plus, X, FileText, Info, Link2, AlertTriangle, ChevronDown, ChevronRigh
 import { toast } from 'react-toastify';
 import { Input } from '@/components/ui/input';
 import { getPostHog } from '../../../shared/services/analytics/lazy-analytics';
-import { BACKEND_URL } from '../../../shared/constants/constant';
+import { generateSatStream } from '../../../shared/services/validation/generateSatModel';
 import { ProjectDiagram, MAX_DIAGRAMS_PER_TYPE, SupportedDiagramType, isUMLModel, isGrapesJSProjectData, isQuantumCircuitData } from '../../../shared/types/project';
 import { useAppDispatch, useAppSelector } from '../../../app/store/hooks';
 import type { QualityCheckState } from '../../generation/types';
@@ -232,54 +232,78 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
       return;
     }
 
-    const backendBase = (BACKEND_URL || '').replace(/\/$/, '');
-    const endpointUrl = backendBase.endsWith('/besser_api')
-      ? `${backendBase}/generate-alloy-do`
-      : `${backendBase}/besser_api/generate-alloy-do`;
+    const toastId = toast.loading('🔍 Searching for a SAT instance...');
+    let nextModel: unknown = null;
 
     try {
-      const response = await fetch(endpointUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: refDiagram?.title ?? 'Class Diagram',
-          model: refModel,
-        }),
-      });
-      
+      await generateSatStream(
+        refModel,
+        refDiagram?.title ?? 'Class Diagram',
+        (data) => {
+          if (!data.done) {
+            toast.update(toastId, { render: data.message });
+            return;
+          }
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(errorBody || `HTTP ${response.status}`);
-      }
+          if (data.sat !== true) {
+            toast.update(toastId, {
+              render: data.message,
+              type: 'error',
+              isLoading: false,
+              autoClose: 5000,
+            });
+            if (data.errors?.length) {
+              toast.error(`❌ Issues found:\n\n${data.errors.join('\n\n')}`, {
+                position: 'top-right',
+                autoClose: 5000,
+                theme: 'dark',
+              });
+            }
+            return;
+          }
 
-      const result = await response.json();
-      if (result?.sat !== true) {
-        toast.warning(result?.message ?? 'Model is unsatisfiable.');
-        return;
-      }
+          if (!isUMLModel(data.object_model)) {
+            const details = typeof data.error === 'string' ? ` ${data.error}` : '';
+            toast.update(toastId, {
+              render: `SAT instance found, but Object Diagram payload is missing.${details}`,
+              type: 'warning',
+              isLoading: false,
+              autoClose: 5000,
+            });
+            return;
+          }
 
-      const nextModel = result?.object_model;
-      if (!isUMLModel(nextModel)) {
-        const details = typeof result?.error === 'string' ? ` ${result.error}` : '';
-        toast.warning(`SAT instance found, but Object Diagram payload is missing.${details}`);
-        return;
-      }
-
-      await dispatch(updateDiagramModelThunk({ model: nextModel as any })).unwrap();
-      await apollonEditor.nextRender;
-      apollonEditor.model = { ...nextModel } as any;
-      await apollonEditor.nextRender;
-
-      toast.success(result?.message ?? 'SAT instance generated successfully.');
-      getPostHog()?.capture('object_diagram_generated_from_sat', {
-        elements: Object.keys(nextModel.elements ?? {}).length,
-        relationships: Object.keys(nextModel.relationships ?? {}).length,
-      });
+          nextModel = data.object_model;
+          toast.update(toastId, {
+            render: data.message,
+            type: 'success',
+            isLoading: false,
+            autoClose: 5000,
+          });
+        },
+      );
     } catch (error: any) {
       const details = typeof error?.message === 'string' ? error.message : String(error);
-      toast.error(`Failed to generate SAT instance: ${details}`);
+      toast.update(toastId, {
+        render: `Failed to generate SAT instance: ${details}`,
+        type: 'error',
+        isLoading: false,
+        autoClose: 5000,
+      });
+      return;
     }
+
+    if (!isUMLModel(nextModel)) return;
+
+    await dispatch(updateDiagramModelThunk({ model: nextModel as any })).unwrap();
+    await apollonEditor.nextRender;
+    apollonEditor.model = { ...nextModel } as any;
+    await apollonEditor.nextRender;
+
+    getPostHog()?.capture('object_diagram_generated_from_sat', {
+      elements: Object.keys(nextModel.elements ?? {}).length,
+      relationships: Object.keys(nextModel.relationships ?? {}).length,
+    });
   }, [apollonEditor, classDiagrams, classRefId, currentDiagramType, dispatch]);
 
   const showTabs = diagrams.length > 0;
