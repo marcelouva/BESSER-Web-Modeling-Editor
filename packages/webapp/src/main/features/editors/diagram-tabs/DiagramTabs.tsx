@@ -234,8 +234,10 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
 
     const backendBase = (BACKEND_URL || '').replace(/\/$/, '');
     const endpointUrl = backendBase.endsWith('/besser_api')
-      ? `${backendBase}/generate-alloy-do`
-      : `${backendBase}/besser_api/generate-alloy-do`;
+      ? `${backendBase}/generate-alloy-do-stream`
+      : `${backendBase}/besser_api/generate-alloy-do-stream`;
+
+    const toastId = toast.loading('🔍 Starting SAT-based generation...');
 
     try {
       const response = await fetch(endpointUrl, {
@@ -246,23 +248,72 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
           model: refModel,
         }),
       });
-      
 
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
         const errorBody = await response.text();
         throw new Error(errorBody || `HTTP ${response.status}`);
       }
 
-      const result = await response.json();
-      if (result?.sat !== true) {
-        toast.warning(result?.message ?? 'Model is unsatisfiable.');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResult: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data?.done) {
+              finalResult = data;
+            } else if (data?.message) {
+              toast.update(toastId, { render: data.message });
+            }
+          } catch {
+          }
+        }
+      }
+
+      if (buffer.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(buffer.slice(6));
+          if (data?.done) {
+            finalResult = data;
+          }
+        } catch {
+        }
+      }
+
+      if (!finalResult) {
+        throw new Error('No result produced by the backend.');
+      }
+
+      if (finalResult.sat !== true) {
+        toast.update(toastId, {
+          render: `❌ ${finalResult?.message ?? 'Model is unsatisfiable.'}`,
+          type: 'warning',
+          isLoading: false,
+          autoClose: 5000,
+        });
         return;
       }
 
-      const nextModel = result?.object_model;
+      const nextModel = finalResult?.object_model;
       if (!isUMLModel(nextModel)) {
-        const details = typeof result?.error === 'string' ? ` ${result.error}` : '';
-        toast.warning(`SAT instance found, but Object Diagram payload is missing.${details}`);
+        const details = typeof finalResult?.error === 'string' ? ` ${finalResult.error}` : '';
+        toast.update(toastId, {
+          render: `⚠️ SAT instance found, but Object Diagram payload is missing.${details}`,
+          type: 'warning',
+          isLoading: false,
+          autoClose: 5000,
+        });
         return;
       }
 
@@ -271,12 +322,18 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
       apollonEditor.model = { ...nextModel } as any;
       await apollonEditor.nextRender;
 
-      toast.success(result?.message ?? 'SAT instance generated successfully.');
+      toast.update(toastId, {
+        render: `✅ ${finalResult?.message ?? 'SAT instance generated successfully.'}`,
+        type: 'success',
+        isLoading: false,
+        autoClose: 5000,
+      });
       getPostHog()?.capture('object_diagram_generated_from_sat', {
         elements: Object.keys(nextModel.elements ?? {}).length,
         relationships: Object.keys(nextModel.relationships ?? {}).length,
       });
     } catch (error: any) {
+      toast.dismiss(toastId);
       const details = typeof error?.message === 'string' ? error.message : String(error);
       toast.error(`Failed to generate SAT instance: ${details}`);
     }
