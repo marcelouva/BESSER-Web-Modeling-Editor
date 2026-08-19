@@ -606,10 +606,10 @@ export const DiagramTabs: React.FC<DiagramTabsProps> = ({
                           type="button"
                           className="inline-flex items-center gap-1 rounded-md border border-brand/15 bg-card px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm transition-colors hover:border-brand/30 hover:bg-brand/[0.04] focus:outline-none focus:ring-1 focus:ring-brand/20"
                           onClick={handleGenerateSat}
-                          title="Generate SAT consistency report for the current Object Diagram context."
+                          title="Generate an object diagram that instantiates the class diagram and satisfies its OCL constraints."
                         >
                           <Wand2 className="size-3" />
-                          SAT-based generate
+                          Semantic generation
                         </button>
                       </>
                     )}
